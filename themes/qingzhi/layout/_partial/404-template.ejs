@@ -1,0 +1,42 @@
+<div class="post-main">
+    <div class="post-md">
+            <h2>Page not found.</h2>
+            <br>
+            <div style="text-align: center;">
+                <% if(theme.index.header != null || theme.index.header == "") {%>
+                    <div class="index-header-line" >
+                        <% if(theme.index.dailySentence && theme.index.dailySentence.enable !== false) { %>
+                            <% 
+                              // 兼容旧配置：theme.index.dailySentence 如果是 boolean，则使用默认 jinrishici
+                              var quoteConfig = typeof theme.index.dailySentence === 'object' ? theme.index.dailySentence : {};
+                              var api = quoteConfig.api || 'jinrishici';
+                              var timeout = quoteConfig.timeout || 3000;
+                              var customUrl = quoteConfig.custom_url || '';
+                              var token = quoteConfig.jinrishici_token || '';
+                              var fallbacks = quoteConfig.fallbacks || ['读书不觉已春深，一寸光阴一寸金。', '纸上得来终觉浅，绝知此事要躬行。', '博观而约取，厚积而薄发。'];
+                              var fallback = fallbacks[Math.floor(Math.random() * fallbacks.length)];
+                            %>
+                            <span id="quote" 
+                                  data-api="<%= api %>"
+                                  data-timeout="<%= timeout %>"
+                                  data-custom-url="<%= customUrl %>"
+                                  data-token="<%= token %>"
+                                  data-fallback="<%= fallback %>"
+                                  style="font-size: large;"></span>
+                            <script defer src="<%= url_for('/js/dailySentence.js') %>" ></script>
+                        <% } else { %>
+                            <div id="hiddenHeaderContentArray" style="display: none;">
+                                <% var headerContentArray = theme.index.header %>
+                                <% var headerContentArrayLength = headerContentArray.length %>
+                                <% for(let i = 0; i < headerContentArrayLength; i++) { %>
+                                    <span><%= theme.index.header[i] %></span>
+                                <% } %>
+                            </div>
+                            <span id="targetSpan" style="font-size: large;"></span>
+                        <% } %>
+                    </div>
+                <% } %>
+                <a href="/">Go Back Home</a>
+            </div>
+    </div>
+</div>

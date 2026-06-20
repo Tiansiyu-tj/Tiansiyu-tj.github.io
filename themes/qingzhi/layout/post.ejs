@@ -1,0 +1,189 @@
+<div class="post-main">
+    <% var titlePosition = "left" %>
+
+    <% if(is_post()) { %>
+        <% if(page.hasOwnProperty('titlePosition') && (page.titlePosition == 'left' || page.titlePosition == 'center')) { %>
+            <% if(page.titlePosition == 'left') {  %>
+                <div class="post-main-title">
+                    <%= page.title %>
+                </div>
+            <% } else {  titlePosition = "center" %>
+                <div class="post-main-title" style="text-align: center;">
+                    <%= page.title %>
+                </div>
+            <% } %>
+
+        <% } else { %>
+            <% if(theme.post.titlePosition == 'left') {  %>
+                <div class="post-main-title">
+                    <%= page.title %>
+                </div>
+            <% } else { titlePosition = "center" %>
+                <div class="post-main-title" style="text-align: center;">
+                    <%= page.title %>
+                </div>
+            <% } %>
+        <% } %>
+      
+    <% } %>
+
+    <% if(is_post() && !(page.hasOwnProperty('postInfo') && page.postInfo == false)) { %>
+        
+        <% 
+
+            var showUpdate = theme.postInfo.updateDate && hasManualUpdated(page);
+        %>
+
+        <% if(titlePosition == "left") { %>
+            <div class="post-head-meta-left">
+        <% } else { %>
+            <div class="post-head-meta-center">
+        <% } %>
+        
+                <% if(showUpdate) { %>
+                    <span>最近更新：<%- date(page.updated, "YYYY-MM-DD") %></span> 
+                <% } %>
+                
+                <% if(theme.postInfo.wordCount) { %>
+                    <% if(showUpdate) {  %>
+                        &nbsp; | &nbsp;
+                    <% } %>
+                     <span>字数：<%= wordcount(page.content) %></span>
+                <% } %>
+                
+                <% if(theme.postInfo.readTime) { %>
+                    <% if(theme.postInfo.wordCount || showUpdate) {  %>
+                        &nbsp; | &nbsp;
+                    <% } %>
+                    <span>时长：<%= min2read(page.content) %>分钟</span>
+                <% } %>
+                
+                <% if(theme.postInfo.viewCount) { %>
+                    <% if(theme.postInfo.wordCount || showUpdate || theme.postInfo.readTime) {  %>
+                        &nbsp; | &nbsp;
+                    <% } %>
+                    <span id="busuanzi_container_page_pv">
+                        阅读：<span id="busuanzi_value_page_pv"></span>次
+                    </span>
+                <% } %>
+            </div>
+    <% } %>
+
+    <%# ===== 专栏导航 (Series Nav) ===== %>
+    <% if(is_post() && page.series) { %>
+      <%
+        var allSeriesPosts = [];
+        var seriesSlug = page.series;  // 默认用中文名
+        site.posts.forEach(function(p) {
+          if (p.series === page.series && !p.hide) {
+            allSeriesPosts.push(p);
+            if (p.series_slug && seriesSlug === page.series) {
+              seriesSlug = p.series_slug;  // 用第一个找到的 slug
+            }
+          }
+        });
+        allSeriesPosts.sort(function(a, b) { return a.date - b.date; });
+        var seriesIdx = -1;
+        for (var si = 0; si < allSeriesPosts.length; si++) {
+          if (allSeriesPosts[si]._id === page._id) { seriesIdx = si; break; }
+        }
+        var prevInSeries = seriesIdx > 0 ? allSeriesPosts[seriesIdx - 1] : null;
+        var nextInSeries = seriesIdx < allSeriesPosts.length - 1 ? allSeriesPosts[seriesIdx + 1] : null;
+      %>
+      <div class="series-nav">
+        <div class="series-nav-header">
+          <a class="series-nav-title" href="/series/<%= seriesSlug %>/">📚 <%= page.series %></a>
+          <span class="series-nav-count">第 <%= seriesIdx + 1 %>/<%= allSeriesPosts.length %> 篇</span>
+        </div>
+        <div class="series-nav-links">
+          <% if(prevInSeries) { %>
+            <a class="series-nav-prev" href="<%- url_for(prevInSeries.path) %>"><span class="series-nav-arrow">←</span> <span class="series-nav-link-title"><%= prevInSeries.title %></span></a>
+          <% } %>
+          <% if(nextInSeries) { %>
+            <a class="series-nav-next" href="<%- url_for(nextInSeries.path) %>"><span class="series-nav-link-title"><%= nextInSeries.title %></span> <span class="series-nav-arrow">→</span></a>
+          <% } %>
+        </div>
+      </div>
+    <% } %>
+
+    <div class="post-md">
+        <% if(theme.tool.topToc) { %>
+            <% if(is_post() && (!('topToc' in page) || page.topToc == true)) { %>
+                <%- toc(page.content, {
+                    class: 'post-toc',
+                    list_number: false,
+                    min_depth: 1,
+                    max_depth: 6
+                }) %>
+            <% } %>
+        <% } %>
+        <%- page.content %>
+    </div>
+
+    <% if(is_post()) { %>
+    <div class="post-meta">
+            <div class="post-meta-author">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                <span><%= page.author %></span>
+            </div>
+            <div class="post-meta-row">
+                <span class="post-meta-date">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    <%- date(page.date, "YYYY-MM-DD") %>
+                </span>
+                <% if(page.tags.data.length > 0) { %>
+                    <span class="post-meta-tags">
+                        <% var postTags = page.tags.data; %>
+                        <% for(var j = 0; j < postTags.length; j++) { %>
+                            <a class="post-meta-chip" href='<%- url_for(postTags[j].path)%>'>#<%= postTags[j].name %></a>
+                        <% } %>
+                    </span>
+                <% } %>
+                <% if(page.categories.data.length > 0) { %>
+                    <span class="post-meta-cats">
+                        <% var postCategories = page.categories.data; %>
+                        <% for(var j = 0; j < postCategories.length; j++) { %>
+                            <a class="post-meta-chip post-meta-chip--cat" href='<%- url_for(postCategories[j].path)%>'><%= postCategories[j].name %></a>
+                        <% break;} %>
+                    </span>
+                <% } %>
+            </div>
+    </div>
+    <% } %>
+    
+    <% if(theme.postInfo.prevAndNextLink.status == true) { %>
+        <% if(!(page.hasOwnProperty('hide') && page.hide == true)) { %>
+            <% var prev_page = page.prev;
+                while(prev_page != null && prev_page.hasOwnProperty('hide') && prev_page.hide == true) {
+                    prev_page = prev_page.prev;
+                };
+                var next_page = page.next;
+                while(next_page != null && next_page.hasOwnProperty('hide') && next_page.hide == true) {
+                    next_page = next_page.next;
+                }
+            %>
+    
+            <div class="post-nav-links">
+                <% if(prev_page != null) { %>
+                    <a class="post-nav-link post-nav-prev" href='<%- url_for(prev_page.path) %>'>
+                        <span class="post-nav-label"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg> <%= theme.postInfo.prevAndNextLink.prevInfo %></span>
+                        <span class="post-nav-title"><%= prev_page.title %></span>
+                    </a>
+                <% } %>
+                <% if(next_page != null) { %>
+                    <a class="post-nav-link post-nav-next" href="<%- url_for(next_page.path) %>">
+                        <span class="post-nav-label"><%= theme.postInfo.prevAndNextLink.nextInfo %> <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg></span>
+                        <span class="post-nav-title"><%= next_page.title %></span>
+                    </a>
+                <% } %>
+            </div>
+    
+        <% } %>
+    <% } %>
+
+    <% if (!page.hasOwnProperty('comment') || page.comment == true) { %>
+        <%- partial('_partial/comments/comment') %>
+    <% } %> 
+</div>
+
+

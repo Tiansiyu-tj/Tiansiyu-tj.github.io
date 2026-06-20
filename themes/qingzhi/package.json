@@ -1,0 +1,34 @@
+{
+  "name": "hexo-theme-qingzhi",
+  "version": "3.0.0",
+  "private": false,
+  "description": "晴纸 (晴纸) — a Hexo blog theme based on A4 paper aesthetics & HyperOS 3 霸蓝 design language.",
+  "scripts": {
+    "npm:publish": "npm publish",
+    "format": "prettier --write ./source/js/*.js ./scripts ",
+    "lint:style": "stylelint --fix ./source/css",
+    "git:push": "git push --tag && git push -u origin dev",
+    "git:add": "npm run lint:style && git add ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yeliqin666/my_blog.git"
+  },
+  "keywords": [
+    "hexo",
+    "theme",
+    "A4",
+    "simple",
+    "pure",
+    "powerful",
+    "hexo-theme",
+    "blog"
+  ],
+  "author": "yeliqin666",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/yeliqin666/my_blog/issues"
+  },
+  "homepage": "https://github.com/yeliqin666/my_blog#readme",
+  "main": "_config.yml" 
+}

@@ -1,0 +1,62 @@
+<div class="archive-list">
+    <ul class="archive">
+        <% var postArray = site.posts.data %>
+  
+        <!--文章先按照时间排好序-->
+        <% postArray.sort((a, b) => {
+            if (a.updated > b.updated) {
+              return -1;
+            }
+            if (a.updated < b.updated) {
+              return 1;
+            }
+            return 0;
+          }) 
+        %>
+  
+  
+        
+        <% const hashmap = new HashMap() %>
+        <% const allPostList = new List() %>
+  
+
+
+        <% for (let i = 0; i < postArray.length; i++) { 
+            var p = postArray[i];
+            
+            // 1. 判断是否被隐藏
+            var isHidden = ('hide' in p) && p.hide == true;
+
+            // 2. 核弹级判定：只有源码里亲手写了 "updated:" 才算数！
+            // 这样彻底无视了系统时间、编译时间、Git克隆时间的干扰
+            var isManuallyUpdated = hasManualUpdated(p);
+
+            // 同时满足：没隐藏 + 亲手写了更新时间
+            if (!isHidden && isManuallyUpdated) {
+                allPostList.add(p);
+            }
+        }  %>
+  
+        <li>
+            <span class="year-font-color">
+                最近更新：
+            </span>
+        </li>
+        <!--放 文章-->
+        <% for (let i = 0; i < allPostList.size(); i++) { %>
+            <% var thisPost = allPostList.get(i) %>
+            <li>
+              <span class="archive-date">&nbsp;&nbsp;&nbsp;<%= date(thisPost.updated, "YYYY/MM/DD") %> 
+              </span>
+              <div class="archive-main">
+                <% if(thisPost.categories.length > 0) { %>
+                  <a class="archive-title"  href="/<%= thisPost.categories.data[0].path %>">
+                    <%= thisPost.categories.data[0].name %> 
+                  </a> | 
+                <% } %>
+                  <a class="archive-title" href="<%- url_for(thisPost.path) %>"><%= thisPost.title %></a>
+              </div>
+            </li>
+        <% } %>
+    </ul>
+  </div>

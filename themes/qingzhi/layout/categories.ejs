@@ -1,0 +1,43 @@
+<a class="browse-back" href="/list/">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+  文章列表
+</a>
+<div class="subpage-title">🔖<i>分类</i></div>
+<ul class="inline-ul" >
+
+  <% var array = site.posts.data %>
+
+  <% var categoriesHashMap = new HashMap() %>
+  <% var categoryChildHashmap = new HashMap() %>
+  <% var categoriesList = new List() %>
+  
+  <% for(var i = 0; i < array.length; i++) {
+     if(!('hide' in array[i]) || array[i].hide == false){
+
+        var postCategories = array[i].categories.data;
+        for(var j = 0; j < postCategories.length; j++) {
+
+          if(postCategories.length > 1) {
+            categoryChildHashmap.put(postCategories[0].name, postCategories[1]);
+          }
+
+          if(!categoriesHashMap.containsKey(postCategories[j].name)) {
+            categoriesHashMap.put(postCategories[j].name, 1);
+            categoriesList.add(postCategories[j].name);
+          } else {
+            categoriesHashMap.put(postCategories[j].name, categoriesHashMap.get(postCategories[j].name) + 1);
+          }
+          break;
+        } 
+     }
+  }  %>
+      <% for (let i = 0; i < categoriesList.size(); i++) { %>
+        <li class="inline-li">
+            <a href="/categories<%- url_for(categoriesList.get(i)) %>"><%= categoriesList.get(i) %></a>
+            <span><i><%= categoriesHashMap.get(categoriesList.get(i)) %></i></span>
+        </li>
+    <% } %>
+    
+
+    
+</ul>

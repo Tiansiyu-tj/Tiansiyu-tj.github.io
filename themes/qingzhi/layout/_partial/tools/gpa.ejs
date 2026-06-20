@@ -1,0 +1,129 @@
+{id:'gpa',name:'GPA 计算器',icon:'📊',cat:'campus',desc:'绩点计算 · XJTU 默认规则 · 可自定义',
+html:function(){return '<div class="t-row" style="align-items:center;flex-wrap:wrap">'+
+  '<span class="t-lbl" id="gpaRuleDesc" style="flex:1;font-size:.75em;color:#888">📐 XJTU 研究生绩点: 95→4.3 · 90→4.0 · 85→3.7 · 81→3.3 · 78→3.0 · 75→2.7 · 72→2.3 · 68→2.0 · 64→1.7 · 60→1.0</span>'+
+  '<button class="t-btn t-btn-o" id="gpaRuleBtn" style="font-size:.72em;padding:3px 10px">⚙ 规则设置</button>'+
+'</div>'+
+'<div id="gpaRulePanel" style="display:none;border:1px solid #DCE1E7;border-radius:8px;padding:10px;margin:6px 0;background:#F5F7F9">'+
+  '<div class="t-row" style="justify-content:space-between;align-items:center;margin-bottom:6px">'+
+    '<span class="t-lbl" style="font-weight:600">分数→绩点 映射规则</span>'+
+    '<div><button class="t-btn t-btn-o" id="gpaAddRule" style="padding:2px 8px;font-size:.72em">＋ 添加区间</button>'+
+    '<button class="t-btn t-btn-o" id="gpaResetRule" style="padding:2px 8px;font-size:.72em;margin-left:4px">恢复 XJTU 默认</button></div>'+
+  '</div>'+
+  '<div id="gpaRuleBody" style="max-height:200px;overflow-y:auto"></div>'+
+  '<div style="font-size:.7em;color:#99AAB5;margin-top:6px">提示: 分数区间从高到低排列，不在任何区间内的分数绩点为 0。不同学校可能有不同的分段与满绩。</div>'+
+'</div>'+
+'<div style="overflow-x:auto"><table class="ct-table" id="gpaTable"><thead><tr><th style="min-width:140px">课程名称</th><th style="width:70px">学分</th><th style="width:70px">分数</th><th style="width:60px">绩点</th><th style="width:40px"></th></tr></thead><tbody id="gpaTbody"></tbody></table></div>'+
+'<div class="t-row" style="justify-content:center;margin:10px 0"><button class="t-btn t-btn-s" id="gpaAdd">＋ 添加课程</button><button class="t-btn t-btn-o" id="gpaClear" style="font-size:.75em">🗑️ 清空</button></div>'+
+'<div id="gpaResult" style="background:#f0f7ff;border-radius:10px;padding:14px;text-align:center;margin-top:8px"><div style="font-size:.78em;color:#888">加权平均绩点</div><div id="gpaVal" style="font-size:2.2em;font-weight:700;color:#409eff">—</div><div id="gpaDetail" style="font-size:.75em;color:#999;margin-top:4px"></div></div>'},
+init:function(el){
+  /* XJTU 默认规则 */
+  var XJTU_RULES=[[95,100,4.3],[90,94,4.0],[85,89,3.7],[81,84,3.3],[78,80,3.0],[75,77,2.7],[72,74,2.3],[68,71,2.0],[64,67,1.7],[60,63,1.0],[0,59,0]];
+  var rules=[];
+  function cloneRules(src){var r=[];for(var i=0;i<src.length;i++)r.push([src[i][0],src[i][1],src[i][2]]);return r}
+
+  /* 绩点查询 */
+  function toGPA(s){for(var i=0;i<rules.length;i++){if(s>=rules[i][0]&&s<=rules[i][1])return rules[i][2]}return 0}
+
+  /* ===== 规则编辑面板 ===== */
+  var rulePanel=el.querySelector('#gpaRulePanel');
+  var ruleBody=el.querySelector('#gpaRuleBody');
+  var ruleDesc=el.querySelector('#gpaRuleDesc');
+  var rulePanelVisible=false;
+
+  function buildRuleDesc(){
+    var parts=[];
+    for(var i=0;i<rules.length;i++){
+      if(rules[i][2]>0) parts.push(rules[i][0]+'→'+rules[i][2]);
+    }
+    ruleDesc.textContent='📐 当前规则: '+parts.join(' · ');
+  }
+
+  function buildRuleEditor(){
+    ruleBody.innerHTML='';
+    for(var i=0;i<rules.length;i++){
+      (function(i){
+        var row=document.createElement('div');
+        row.style.cssText='display:flex;align-items:center;gap:4px;margin:3px 0;font-size:.78em';
+        row.innerHTML='<input class="t-in" type="number" min="0" max="100" value="'+rules[i][0]+'" style="width:50px" data-field="min">'+
+          '<span>~</span>'+
+          '<input class="t-in" type="number" min="0" max="100" value="'+rules[i][1]+'" style="width:50px" data-field="max">'+
+          '<span>分 → 绩点</span>'+
+          '<input class="t-in" type="number" min="0" max="5" step="0.1" value="'+rules[i][2]+'" style="width:55px" data-field="gpa">'+
+          '<button class="t-btn t-btn-d" style="padding:2px 6px;font-size:.7em">✕</button>';
+        var inputs=row.querySelectorAll('input');
+        inputs[0].oninput=function(){rules[i][0]=parseFloat(this.value)||0;onRuleChange()};
+        inputs[1].oninput=function(){rules[i][1]=parseFloat(this.value)||0;onRuleChange()};
+        inputs[2].oninput=function(){rules[i][2]=parseFloat(this.value)||0;onRuleChange()};
+        row.querySelector('button').onclick=function(){rules.splice(i,1);buildRuleEditor();onRuleChange()};
+        ruleBody.appendChild(row);
+      })(i);
+    }
+  }
+
+  function onRuleChange(){buildRuleDesc();calc()}
+
+  el.querySelector('#gpaRuleBtn').onclick=function(){
+    rulePanelVisible=!rulePanelVisible;
+    rulePanel.style.display=rulePanelVisible?'':'none';
+    if(rulePanelVisible)buildRuleEditor();
+  };
+
+  el.querySelector('#gpaAddRule').onclick=function(){
+    rules.push([0,0,0]);buildRuleEditor();onRuleChange();
+  };
+
+  el.querySelector('#gpaResetRule').onclick=function(){
+    rules=cloneRules(XJTU_RULES);buildRuleEditor();onRuleChange();
+  };
+
+  /* ===== 课程表 ===== */
+  var tbody=el.querySelector('#gpaTbody');
+
+  function addRow(name,credit,score){
+    var tr=document.createElement('tr');
+    tr.innerHTML='<td><input class="t-in gpa-name" value="'+(name||'')+'" placeholder="课程名"></td>'
+      +'<td><input class="t-in gpa-credit" type="number" min="0" max="20" step="0.5" value="'+(credit||'')+'" placeholder="学分" style="width:60px"></td>'
+      +'<td><input class="t-in gpa-score" type="number" min="0" max="100" value="'+(score||'')+'" placeholder="分数" style="width:60px"></td>'
+      +'<td class="gpa-gp" style="font-weight:600;color:#409eff;text-align:center">—</td>'
+      +'<td><button class="t-btn t-btn-d" style="padding:3px 8px;font-size:.7em">✕</button></td>';
+    tr.querySelector('.gpa-score').oninput=function(){calc()};
+    tr.querySelector('.gpa-credit').oninput=function(){calc()};
+    tr.querySelector('button').onclick=function(){tr.remove();calc()};
+    tbody.appendChild(tr);
+    calc();
+    return tr;
+  }
+
+  function calc(){
+    var rows=tbody.querySelectorAll('tr');
+    var totalCredit=0,totalGP=0,totalScore=0,cnt=0;
+    rows.forEach(function(tr){
+      var c=parseFloat(tr.querySelector('.gpa-credit').value);
+      var s=parseFloat(tr.querySelector('.gpa-score').value);
+      var gpCell=tr.querySelector('.gpa-gp');
+      if(isNaN(c)||isNaN(s)){gpCell.textContent='—';gpCell.style.color='#ccc';return}
+      var g=toGPA(s);gpCell.textContent=g.toFixed(1);
+      gpCell.style.color=g>=3.7?'#67c23a':g>=2.0?'#409eff':g>=1.0?'#e6a23c':'#f56c6c';
+      totalCredit+=c;totalGP+=c*g;totalScore+=c*s;cnt++;
+    });
+    if(totalCredit>0){
+      var gpa=(totalGP/totalCredit);
+      el.querySelector('#gpaVal').textContent=gpa.toFixed(4);
+      el.querySelector('#gpaVal').style.color=gpa>=3.7?'#67c23a':gpa>=2.0?'#409eff':'#f56c6c';
+      el.querySelector('#gpaDetail').textContent=cnt+' 门课 · 总学分 '+totalCredit+' · 加权均分 '+(totalScore/totalCredit).toFixed(2);
+    }else{
+      el.querySelector('#gpaVal').textContent='—';
+      el.querySelector('#gpaVal').style.color='#409eff';
+      el.querySelector('#gpaDetail').textContent='';
+    }
+  }
+
+  el.querySelector('#gpaAdd').onclick=function(){addRow('','','')};
+  el.querySelector('#gpaClear').onclick=function(){tbody.innerHTML='';calc()};
+
+  /* 初始化 */
+  rules=cloneRules(XJTU_RULES);
+  buildRuleDesc();
+  addRow('示例：自然辩证法',1,92);addRow('示例：数值分析',3,87);addRow('示例：矩阵论',3,78);
+  calc();
+}}

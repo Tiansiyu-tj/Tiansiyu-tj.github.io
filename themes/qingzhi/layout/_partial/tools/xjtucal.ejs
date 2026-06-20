@@ -1,0 +1,68 @@
+{id:'xjtucal',name:'交大日历',icon:'🏫',cat:'campus',desc:'作息时间 · 学期周数 · 教学楼查询',
+html(){
+  var tabs='<div class="t-row" style="justify-content:center;gap:6px;margin-bottom:12px">'
+    +'<button class="t-btn xc-tab" data-tab="schedule" style="font-weight:700">📅 作息时间</button>'
+    +'<button class="t-btn t-btn-o xc-tab" data-tab="week">📆 学期周数</button>'
+    +'<button class="t-btn t-btn-o xc-tab" data-tab="building">🏢 教学楼</button></div>';
+  var schedule='<div id="xcSchedule">'
+    +'<div class="t-row" style="justify-content:center"><span id="xcSeason" style="font-size:.82em;font-weight:600;color:#409eff"></span></div>'
+    +'<table class="ct-table" id="xcTimeTable"><thead><tr><th>节次</th><th>上课</th><th>下课</th><th>考勤开始</th><th>考勤结束</th></tr></thead><tbody id="xcTimeTbody"></tbody></table></div>';
+  var week='<div id="xcWeek" style="display:none">'
+    +'<div class="t-lbl">📅 开学日期</div>'
+    +'<div class="t-row"><input type="date" class="t-in" id="xcStart" style="max-width:200px"><button class="t-btn t-btn-s" id="xcCalcWeek">计算</button></div>'
+    +'<div id="xcWeekResult" style="background:#f0f7ff;border-radius:10px;padding:18px;text-align:center;margin-top:10px"><div style="font-size:.78em;color:#888">当前是</div><div id="xcWeekVal" style="font-size:2.5em;font-weight:700;color:#409eff">—</div><div id="xcWeekDay" style="font-size:.82em;color:#999;margin-top:4px"></div></div></div>';
+  var building='<div id="xcBuilding" style="display:none">'
+    +'<div class="t-lbl">🔍 搜索教学楼</div>'
+    +'<input class="t-in" id="xcBldSearch" placeholder="输入关键词，如 主楼、C座、创新港...">'
+    +'<div id="xcBldResult" class="t-res" style="margin-top:8px;max-height:400px"></div></div>';
+  return tabs+schedule+week+building
+},
+init(el){
+  var W={1:{s:'8:00',e:'8:50',as:'7:20',ae:'8:05'},2:{s:'9:00',e:'9:50',as:'8:20',ae:'9:05'},3:{s:'10:10',e:'11:00',as:'9:35',ae:'10:15'},4:{s:'11:10',e:'12:00',as:'10:35',ae:'11:15'},5:{s:'14:00',e:'14:50',as:'13:20',ae:'14:05'},6:{s:'15:00',e:'15:50',as:'14:20',ae:'15:05'},7:{s:'16:10',e:'17:00',as:'15:35',ae:'16:15'},8:{s:'17:10',e:'18:00',as:'16:35',ae:'17:15'},9:{s:'19:10',e:'20:00',as:'18:30',ae:'19:15'},10:{s:'20:10',e:'21:00',as:'19:35',ae:'20:15'},11:{s:'21:10',e:'22:00',as:'20:35',ae:'21:15'}};
+  var S={1:{s:'8:00',e:'8:50',as:'7:20',ae:'8:05'},2:{s:'9:00',e:'9:50',as:'8:20',ae:'9:05'},3:{s:'10:10',e:'11:00',as:'9:35',ae:'10:15'},4:{s:'11:10',e:'12:00',as:'10:35',ae:'11:15'},5:{s:'14:30',e:'15:20',as:'13:50',ae:'14:35'},6:{s:'15:30',e:'16:20',as:'14:50',ae:'15:35'},7:{s:'16:40',e:'17:30',as:'16:05',ae:'16:45'},8:{s:'17:40',e:'18:30',as:'17:05',ae:'17:45'},9:{s:'19:40',e:'20:30',as:'19:00',ae:'19:45'},10:{s:'20:40',e:'21:30',as:'20:05',ae:'20:45'},11:{s:'21:40',e:'22:30',as:'21:05',ae:'21:45'}};
+  var nowM=new Date().getMonth()+1;
+  var isSummer=(nowM>=5&&nowM<=9);
+  var T=isSummer?S:W;
+  el.querySelector('#xcSeason').textContent=isSummer?'☀️ 当前：夏季作息（5-9月）':'❄️ 当前：冬季作息（10-次年4月）';
+  var tb=el.querySelector('#xcTimeTbody');
+  var nowH=new Date().getHours(),nowMi=new Date().getMinutes(),nowStr=('0'+nowH).slice(-2)+':'+('0'+nowMi).slice(-2);
+  for(var i=1;i<=11;i++){
+    var t=T[i];
+    var active=nowStr>=t.s.replace(/^(\d):/, '0$1')&&nowStr<=t.e.replace(/^(\d):/, '0$1');
+    var tr=document.createElement('tr');
+    if(active)tr.style.cssText='background:#f0f7ff;font-weight:600';
+    tr.innerHTML='<td style="text-align:center;font-weight:700">第 '+i+' 节'+(active?' 🔵':'')+'</td><td>'+t.s+'</td><td>'+t.e+'</td><td style="color:#888">'+t.as+'</td><td style="color:#888">'+t.ae+'</td>';
+    tb.appendChild(tr);
+  }
+  el.querySelector('#xcCalcWeek').onclick=function(){
+    var start=el.querySelector('#xcStart').value;if(!start){el.querySelector('#xcWeekVal').textContent='请选择日期';return}
+    var sd=new Date(start+'T00:00:00'),now=new Date();now.setHours(0,0,0,0);
+    var diff=now-sd,days=Math.floor(diff/86400000),week=Math.floor(days/7)+1;
+    var dayNames=['日','一','二','三','四','五','六'];
+    if(week<1){el.querySelector('#xcWeekVal').textContent='还未开学';el.querySelector('#xcWeekDay').textContent='距开学还有 '+(-days)+' 天'}
+    else{el.querySelector('#xcWeekVal').textContent='第 '+week+' 周';el.querySelector('#xcWeekDay').textContent='星期'+dayNames[now.getDay()]+' · 开学第 '+days+' 天 · '+now.toLocaleDateString('zh-CN')}
+  };
+  var BLDS=[
+    {campus:'兴庆校区',buildings:['主楼（A、B、C、D座）','理科楼','工程馆','逸夫科学馆','逸夫外文楼','教学主楼','东一楼','东二楼','东三楼','东四楼','东五楼','中一楼','中二楼','中三楼','西一楼','西二楼','西三楼','财经校区主楼','宪梓堂']},
+    {campus:'雁塔校区',buildings:['教学楼（教一~教六）','实验楼','图书馆']},
+    {campus:'创新港校区',buildings:['涵英楼','博学楼','格物楼','明德楼','立德楼','弘文楼','笃行楼','致远楼','崇实楼','敏行楼','博观楼','慎思楼','求是楼','正心楼','诚意楼','致知楼','行健楼','日新楼']},
+    {campus:'曲江校区',buildings:['教学楼']},
+    {campus:'医学校区(含附属医院)',buildings:['基础医学院教学楼','公共卫生学院','药学院','口腔医院教学楼']}
+  ];
+  function renderBuildings(keyword){
+    var html='';
+    BLDS.forEach(function(c){
+      var matched=c.buildings.filter(function(b){return!keyword||b.indexOf(keyword)>=0||c.campus.indexOf(keyword)>=0});
+      if(matched.length){html+='<div style="font-weight:600;color:#409eff;margin:8px 0 4px">🏫 '+c.campus+' ('+matched.length+')</div>';matched.forEach(function(b){html+='<div style="padding:3px 0 3px 16px;font-size:.85em;border-bottom:1px solid #f5f5f5">📍 '+b+'</div>'})}
+    });
+    el.querySelector('#xcBldResult').innerHTML=html||'<div style="color:#999;text-align:center">未找到匹配的教学楼</div>';
+  }
+  renderBuildings('');
+  el.querySelector('#xcBldSearch').oninput=function(){renderBuildings(this.value.trim())};
+  var tabs=el.querySelectorAll('.xc-tab');
+  var panels={schedule:el.querySelector('#xcSchedule'),week:el.querySelector('#xcWeek'),building:el.querySelector('#xcBuilding')};
+  tabs.forEach(function(btn){btn.onclick=function(){
+    tabs.forEach(function(b){b.className='t-btn t-btn-o xc-tab'});btn.className='t-btn xc-tab';btn.style.fontWeight='700';
+    Object.keys(panels).forEach(function(k){panels[k].style.display='none'});panels[btn.dataset.tab].style.display='';
+  }});
+}}

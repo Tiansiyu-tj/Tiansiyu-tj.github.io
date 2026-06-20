@@ -1,0 +1,144 @@
+// ── 代码高亮主题 — One Dark × 霁蓝 ──
+// 基于 One Dark Pro 配色，与 HyperOS 3 设计语言协调
+
+highlight-background  = #282c34
+highlight-current     = #2c313a
+highlight-selection   = #3e4451
+highlight-foreground  = #abb2bf
+highlight-comment     = #5c6370
+highlight-red         = #e06c75
+highlight-orange      = #d19a66
+highlight-yellow      = #e5c07b
+highlight-green       = #98c379
+highlight-aqua        = #56b6c2
+highlight-blue        = #61afef
+highlight-purple      = #c678dd
+highlight-gutter-fg   = #495162
+highlight-gutter-bg   = #21252b
+highlight-gutter-sep  = rgba(255,255,255,0.06)
+
+$code-block
+  background: highlight-background
+  padding: 16px 20px
+  border: none
+  border-radius: 8px
+  overflow: auto
+  color: highlight-foreground
+  line-height: 1.7
+
+$line-numbers
+  color: highlight-gutter-fg
+  font-size: 1em
+
+.post-md
+  pre, code
+    font-family: font-mono
+  pre
+    @extend $code-block
+    code
+      background: none
+      text-shadow: none
+      padding: 0
+  .highlight
+    font-size: 14px
+    @extend $code-block
+    border-radius: 8px
+    pre
+      border: none
+      margin: 0
+      padding: 0
+    table
+      margin: 0
+      width: auto
+      padding: 0 !important
+      border-bottom: none !important
+      border-radius: 0 !important
+      border: none !important
+      background: none !important
+    td
+      border: none !important
+      padding: 0 !important
+      background: none !important
+      border-bottom: none !important
+    tr
+      background: none !important
+      &:hover td
+        background: none !important
+    figcaption
+      clearfix()
+      font-size: 0.85em
+      color: highlight-comment
+      line-height: 1em
+      margin-bottom: 1em
+      a
+        float: right
+    .gutter
+      -moz-user-select: none
+      -ms-user-select: none
+      -webkit-user-select: none
+      user-select: none
+      background: highlight-gutter-bg
+      border-right: 1px solid highlight-gutter-sep
+      pre
+        @extend $line-numbers
+        text-align: right
+        padding-right: 14px
+        padding-left: 10px
+        min-width: 2em
+    .code pre
+      padding-left: 16px
+    .line
+      height: 1.7em
+    .line.marked
+      background: highlight-selection
+
+pre
+  .comment
+  .title
+    color: highlight-comment
+    font-style: italic
+  .variable
+  .attribute
+  .tag
+  .regexp
+  .ruby .constant
+  .xml .tag .title
+  .xml .pi
+  .xml .doctype
+  .html .doctype
+  .css .id
+  .css .class
+  .css .pseudo
+    color: highlight-red
+  .number
+  .preprocessor
+  .built_in
+  .literal
+  .params
+  .constant
+    color: highlight-orange
+  .class
+  .ruby .class .title
+  .css .rules .attribute
+    color: highlight-yellow
+  .string
+  .value
+  .inheritance
+  .header
+  .ruby .symbol
+  .xml .cdata
+    color: highlight-green
+  .css .hexcolor
+    color: highlight-aqua
+  .function
+  .python .decorator
+  .python .title
+  .ruby .function .title
+  .ruby .title .keyword
+  .perl .sub
+  .javascript .title
+  .coffeescript .title
+    color: highlight-blue
+  .keyword
+  .javascript .function
+    color: highlight-purple

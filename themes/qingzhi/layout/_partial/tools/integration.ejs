@@ -1,0 +1,151 @@
+{id:'integration',name:'数值积分',icon:'∫',cat:'academic',desc:'单重 · 二重 · 梯形 · Simpson · 自动误差估计',
+html(){return `
+<div class="t-row" style="margin-bottom:12px">
+  <button id="intTab1" class="t-btn" style="font-weight:700">单重积分</button>
+  <button id="intTab2" class="t-btn t-btn-o">二重积分</button>
+</div>
+<div id="intP1">
+  <label class="t-lbl">f(x)</label>
+  <input id="intExpr" class="t-in" value="sin(x)" placeholder="如 sin(x), exp(-x^2)">
+  <div class="t-row" style="gap:8px;margin-top:6px">
+    <div style="flex:1"><label class="t-lbl">a</label><input id="intA" class="t-in" value="0"></div>
+    <div style="flex:1"><label class="t-lbl">b</label><input id="intB" class="t-in" value="pi"></div>
+    <div style="flex:1"><label class="t-lbl">n</label><input id="intN" class="t-in" value="100"></div>
+  </div>
+  <div style="margin:8px 0">
+    <label class="t-lbl" style="margin-right:12px"><input type="checkbox" id="intChkTrap" checked> 梯形法</label>
+    <label class="t-lbl" style="margin-right:12px"><input type="checkbox" id="intChkS13" checked> Simpson 1/3</label>
+    <label class="t-lbl"><input type="checkbox" id="intChkS38"> Simpson 3/8</label>
+  </div>
+  <div id="intPresets" style="margin-bottom:8px">
+    <span class="t-lbl" style="margin-right:4px">预设:</span>
+    <button class="t-btn t-btn-o" data-e="sin(x)" data-a="0" data-b="pi">sin(x) [0,π]</button>
+    <button class="t-btn t-btn-o" data-e="exp(-x^2)" data-a="-3" data-b="3">e^(-x²) [-3,3]</button>
+    <button class="t-btn t-btn-o" data-e="1/(1+x^2)" data-a="-5" data-b="5">1/(1+x²) [-5,5]</button>
+  </div>
+  <button id="intCalc" class="t-btn">计算</button>
+</div>
+<div id="intP2" style="display:none">
+  <label class="t-lbl">f(x, y)</label>
+  <input id="intExpr2" class="t-in" value="sin(x)*cos(y)" placeholder="如 x^2+y^2">
+  <div class="t-row" style="gap:8px;margin-top:6px">
+    <div style="flex:1"><label class="t-lbl">a</label><input id="intA2" class="t-in" value="0"></div>
+    <div style="flex:1"><label class="t-lbl">b</label><input id="intB2" class="t-in" value="pi"></div>
+    <div style="flex:1"><label class="t-lbl">nx</label><input id="intNx" class="t-in" value="50"></div>
+  </div>
+  <div class="t-row" style="gap:8px;margin-top:6px">
+    <div style="flex:1"><label class="t-lbl">c</label><input id="intC2" class="t-in" value="0"></div>
+    <div style="flex:1"><label class="t-lbl">d</label><input id="intD2" class="t-in" value="pi"></div>
+    <div style="flex:1"><label class="t-lbl">ny</label><input id="intNy" class="t-in" value="50"></div>
+  </div>
+  <div style="margin:8px 0">
+    <label class="t-lbl" style="margin-right:12px"><input type="checkbox" id="intChk2Trap" checked> 2D 梯形法</label>
+    <label class="t-lbl"><input type="checkbox" id="intChk2Simp" checked> 2D Simpson</label>
+  </div>
+  <div id="intPresets2" style="margin-bottom:8px">
+    <span class="t-lbl" style="margin-right:4px">预设:</span>
+    <button class="t-btn t-btn-o" data-e="sin(x)*cos(y)" data-a="0" data-b="pi" data-c="0" data-d="pi">sin·cos [0,π]²</button>
+    <button class="t-btn t-btn-o" data-e="x^2+y^2" data-a="0" data-b="1" data-c="0" data-d="1">x²+y² [0,1]²</button>
+  </div>
+  <button id="intCalc2" class="t-btn">计算</button>
+</div>
+<div id="intRes" class="t-res"></div>`},
+async init(el){
+  var q=function(s){return el.querySelector(s)};
+  var res=q('#intRes'), mode=1;
+  var cardS='border-radius:8px;border:1px solid var(--border-warm);padding:10px;background:var(--bg-zebra);margin-bottom:8px';
+  // tabs
+  q('#intTab1').onclick=function(){mode=1;q('#intP1').style.display='';q('#intP2').style.display='none';
+    q('#intTab1').className='t-btn';q('#intTab1').style.fontWeight='700';
+    q('#intTab2').className='t-btn t-btn-o';q('#intTab2').style.fontWeight='';res.innerHTML=''};
+  q('#intTab2').onclick=function(){mode=2;q('#intP1').style.display='none';q('#intP2').style.display='';
+    q('#intTab2').className='t-btn';q('#intTab2').style.fontWeight='700';
+    q('#intTab1').className='t-btn t-btn-o';q('#intTab1').style.fontWeight='';res.innerHTML=''};
+  // presets 1D
+  q('#intPresets').querySelectorAll('.t-btn-o').forEach(function(b){
+    b.onclick=function(){q('#intExpr').value=b.dataset.e;q('#intA').value=b.dataset.a;q('#intB').value=b.dataset.b}});
+  // presets 2D
+  q('#intPresets2').querySelectorAll('.t-btn-o').forEach(function(b){
+    b.onclick=function(){q('#intExpr2').value=b.dataset.e;q('#intA2').value=b.dataset.a;q('#intB2').value=b.dataset.b;
+      q('#intC2').value=b.dataset.c;q('#intD2').value=b.dataset.d}});
+  // helpers
+  function ev1(compiled,x){return compiled.evaluate({x:x,e:Math.E,pi:Math.PI})}
+  function ev2(compiled,x,y){return compiled.evaluate({x:x,y:y,e:Math.E,pi:Math.PI})}
+  function trapezoid(f,a,b,n){var h=(b-a)/n,s=0.5*(ev1(f,a)+ev1(f,b));for(var i=1;i<n;i++)s+=ev1(f,a+i*h);return s*h}
+  function simpson13(f,a,b,n){if(n%2!==0)n++;var h=(b-a)/n,s=ev1(f,a)+ev1(f,b);
+    for(var i=1;i<n;i++)s+=ev1(f,a+i*h)*(i%2===0?2:4);return s*h/3}
+  function simpson38(f,a,b,n){while(n%3!==0)n++;var h=(b-a)/n,s=ev1(f,a)+ev1(f,b);
+    for(var i=1;i<n;i++){var w=i%3===0?2:3;s+=ev1(f,a+i*h)*w}return s*3*h/8}
+  function trap2d(f,a,b,c,d,nx,ny){var hx=(b-a)/nx,hy=(d-c)/ny,s=0;
+    for(var i=0;i<nx;i++)for(var j=0;j<ny;j++){var x0=a+i*hx,x1=x0+hx,y0=c+j*hy,y1=y0+hy;
+      s+=ev2(f,x0,y0)+ev2(f,x1,y0)+ev2(f,x0,y1)+ev2(f,x1,y1)}return s*hx*hy/4}
+  function simp2d(f,a,b,c,d,nx,ny){if(nx%2!==0)nx++;if(ny%2!==0)ny++;
+    var hx=(b-a)/nx,hy=(d-c)/ny;
+    function wx(i){return i===0||i===nx?1:i%2===0?2:4}
+    function wy(j){return j===0||j===ny?1:j%2===0?2:4}
+    var s=0;for(var i=0;i<=nx;i++)for(var j=0;j<=ny;j++)s+=wx(i)*wy(j)*ev2(f,a+i*hx,c+j*hy);
+    return s*hx*hy/9}
+  function fmt(v){return typeof v==='number'?v.toPrecision(12):String(v)}
+  function card(title,val,err,ms){return '<div style="'+cardS+'"><b>'+title+'</b><br>结果: <code>'+fmt(val)+
+    '</code><br>误差估计: <code>'+err.toPrecision(4)+'</code><br><span style="color:var(--font-color-3)">耗时 '+ms.toFixed(1)+' ms</span></div>'}
+  // 1D calc
+  async function calc1d(){
+    var m=await loadMath();var expr=q('#intExpr').value.trim();
+    if(!expr){res.innerHTML='<span style="color:#f56c6c">请输入表达式</span>';return}
+    var a,b,n;try{a=m.evaluate(q('#intA').value);b=m.evaluate(q('#intB').value);n=parseInt(q('#intN').value)}
+    catch(e){res.innerHTML='<span style="color:#f56c6c">区间参数错误</span>';return}
+    if(isNaN(n)||n<1){res.innerHTML='<span style="color:#f56c6c">n 须为正整数</span>';return}
+    if(n>100000){res.innerHTML='<span style="color:#f56c6c">n 不能超过 100000</span>';return}
+    var compiled;try{compiled=m.compile(expr)}catch(e){res.innerHTML='<span style="color:#f56c6c">表达式错误: '+e.message+'</span>';return}
+    var methods=[],chk=[[q('#intChkTrap'),'梯形法',trapezoid,null],
+      [q('#intChkS13'),'Simpson 1/3',simpson13,function(n){return n%2!==0?'Simpson 1/3 要求 n 为偶数':''}],
+      [q('#intChkS38'),'Simpson 3/8',simpson38,function(n){return n%3!==0?'Simpson 3/8 要求 n 为 3 的倍数':''}]];
+    var html='',warns=[];
+    chk.forEach(function(c){if(!c[0].checked)return;
+      if(c[3]){var w=c[3](n);if(w){warns.push(w);return}}
+      var t0=performance.now();var v1=c[2](compiled,a,b,n);var v2=c[2](compiled,a,b,n*2);var ms=performance.now()-t0;
+      html+=card(c[1],v1,Math.abs(v2-v1),ms)});
+    if(warns.length)html='<div style="color:#e6a23c;margin-bottom:8px">⚠ '+warns.join('；')+'</div>'+html;
+    if(!html)html='<span style="color:#e6a23c">请至少选择一种方法</span>';
+    // comparison line
+    var vals=[];chk.forEach(function(c){if(c[0].checked&&(!c[3]||!c[3](n))){
+      var v=c[2](compiled,a,b,n);vals.push({name:c[1],val:v})}});
+    if(vals.length>1){var mn=Math.min.apply(null,vals.map(function(v){return v.val}));
+      var mx=Math.max.apply(null,vals.map(function(v){return v.val}));
+      html+='<div style="color:var(--font-color-3);font-size:0.9em;margin-top:4px">方法间最大差异: <code>'+(mx-mn).toPrecision(4)+'</code></div>'}
+    res.innerHTML=html}
+  // 2D calc
+  async function calc2d(){
+    var m=await loadMath();var expr=q('#intExpr2').value.trim();
+    if(!expr){res.innerHTML='<span style="color:#f56c6c">请输入表达式</span>';return}
+    var a,b,c,d,nx,ny;
+    try{a=m.evaluate(q('#intA2').value);b=m.evaluate(q('#intB2').value);
+      c=m.evaluate(q('#intC2').value);d=m.evaluate(q('#intD2').value);
+      nx=parseInt(q('#intNx').value);ny=parseInt(q('#intNy').value)}
+    catch(e){res.innerHTML='<span style="color:#f56c6c">参数错误</span>';return}
+    if(isNaN(nx)||isNaN(ny)||nx<1||ny<1){res.innerHTML='<span style="color:#f56c6c">nx, ny 须为正整数</span>';return}
+    if(nx>100000||ny>100000){res.innerHTML='<span style="color:#f56c6c">步数不能超过 100000</span>';return}
+    var compiled;try{compiled=m.compile(expr)}catch(e){res.innerHTML='<span style="color:#f56c6c">表达式错误: '+e.message+'</span>';return}
+    var html='',warns=[];
+    if(q('#intChk2Simp').checked&&(nx%2!==0||ny%2!==0))warns.push('2D Simpson 要求 nx, ny 均为偶数');
+    if(q('#intChk2Trap').checked){var t0=performance.now();var v1=trap2d(compiled,a,b,c,d,nx,ny);
+      var v2=trap2d(compiled,a,b,c,d,nx*2,ny*2);var ms=performance.now()-t0;
+      html+=card('2D 梯形法',v1,Math.abs(v2-v1),ms)}
+    if(q('#intChk2Simp').checked&&nx%2===0&&ny%2===0){var t0=performance.now();
+      var v1=simp2d(compiled,a,b,c,d,nx,ny);var v2=simp2d(compiled,a,b,c,d,nx*2,ny*2);
+      var ms=performance.now()-t0;html+=card('2D Simpson',v1,Math.abs(v2-v1),ms)}
+    if(warns.length)html='<div style="color:#e6a23c;margin-bottom:8px">⚠ '+warns.join('；')+'</div>'+html;
+    if(!html&&!warns.length)html='<span style="color:#e6a23c">请至少选择一种方法</span>';
+    // comparison
+    var vals=[];
+    if(q('#intChk2Trap').checked)vals.push({name:'2D梯形',val:trap2d(compiled,a,b,c,d,nx,ny)});
+    if(q('#intChk2Simp').checked&&nx%2===0&&ny%2===0)vals.push({name:'2DSimpson',val:simp2d(compiled,a,b,c,d,nx,ny)});
+    if(vals.length>1){var mn=Math.min.apply(null,vals.map(function(v){return v.val}));
+      var mx=Math.max.apply(null,vals.map(function(v){return v.val}));
+      html+='<div style="color:var(--font-color-3);font-size:0.9em;margin-top:4px">方法间最大差异: <code>'+(mx-mn).toPrecision(4)+'</code></div>'}
+    res.innerHTML=html}
+  q('#intCalc').onclick=calc1d;
+  q('#intCalc2').onclick=calc2d;
+  // Enter key
+  el.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();mode===1?calc1d():calc2d()}});
+}}

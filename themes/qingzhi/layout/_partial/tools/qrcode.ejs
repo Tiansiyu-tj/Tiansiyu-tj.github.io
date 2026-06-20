@@ -1,0 +1,27 @@
+{id:'qrcode',name:'QR 生成器',icon:'📱',cat:'productivity',desc:'样式 · 颜色 · 中心图标',
+html(){return'<div class="t-lbl">输入文本或链接</div><input class="t-in" id="qrIn" value="https://example.com"><div class="t-row" style="margin-top:8px"><label class="t-lbl">前景</label><input type="color" id="qrFg" value="#000000"><label class="t-lbl">背景</label><input type="color" id="qrBg" value="#ffffff"><label class="t-lbl">Emoji</label><input class="t-in" id="qrEmoji" placeholder="如 😀" style="width:60px"></div><div class="t-row"><span class="t-lbl">样式:</span><span class="qr-shape active" data-s="square">■ 方块</span><span class="qr-shape" data-s="round">● 圆点</span><span class="qr-shape" data-s="diamond">◆ 菱形</span></div><div class="t-row"><span class="t-lbl">容错:</span><select class="t-sel" id="qrLevel"><option value="H" selected>高 (H 30%)</option><option value="M">中 (M 15%)</option><option value="L">低 (L 7%)</option></select></div><div style="text-align:center;margin-top:12px"><canvas id="qrCv"></canvas></div>'},
+async init(el){
+  await loadJS('https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js');
+  let style='square';
+  el.querySelectorAll('.qr-shape').forEach(s=>{s.onclick=()=>{el.querySelectorAll('.qr-shape').forEach(x=>x.classList.remove('active'));s.classList.add('active');style=s.dataset.s;render()}});
+  function render(){
+    const text=el.querySelector('#qrIn').value;if(!text){var c0=el.querySelector('#qrCv');c0.getContext('2d').clearRect(0,0,c0.width,c0.height);return}
+    const fg=el.querySelector('#qrFg').value,bg=el.querySelector('#qrBg').value,emoji=el.querySelector('#qrEmoji').value.trim();
+    const lvl=el.querySelector('#qrLevel').value;
+    const qr=qrcode(0,lvl);qr.addData(text);qr.make();
+    const count=qr.getModuleCount(),size=6,margin=4,total=(count+margin*2)*size;
+    const cv=el.querySelector('#qrCv'),ctx=cv.getContext('2d');
+    cv.width=cv.height=total;ctx.fillStyle=bg;ctx.fillRect(0,0,total,total);
+    for(let r=0;r<count;r++)for(let c=0;c<count;c++){
+      if(!qr.isDark(r,c))continue;
+      const x=(c+margin)*size,y=(r+margin)*size;
+      ctx.fillStyle=fg;
+      if(style==='round'){ctx.beginPath();ctx.arc(x+size/2,y+size/2,size/2-.5,0,Math.PI*2);ctx.fill()}
+      else if(style==='diamond'){ctx.beginPath();ctx.moveTo(x+size/2,y);ctx.lineTo(x+size,y+size/2);ctx.lineTo(x+size/2,y+size);ctx.lineTo(x,y+size/2);ctx.closePath();ctx.fill()}
+      else ctx.fillRect(x,y,size,size);
+    }
+    if(emoji){const es=size*5;ctx.font=es+'px serif';ctx.textAlign='center';ctx.textBaseline='middle';const cx=total/2,cy=total/2;ctx.fillStyle=bg;ctx.beginPath();ctx.arc(cx,cy,es*.6,0,Math.PI*2);ctx.fill();ctx.fillText(emoji,cx,cy)}
+  }
+  ['qrIn','qrFg','qrBg','qrEmoji','qrLevel'].forEach(id=>el.querySelector('#'+id).addEventListener('input',render));
+  render();
+}}

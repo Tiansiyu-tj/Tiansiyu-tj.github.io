@@ -1,0 +1,594 @@
+{id:'montecarlo',name:'Monte Carlo',icon:'🎲',cat:'academic',desc:'MC积分 · 估算π · 舍选法 · MCMC · 随机游走 · Ising模型',
+html(){return ''+
+'<div class="t-row" id="mcTabs" style="flex-wrap:wrap"></div>'+
+'<div id="mcP0">'+
+  '<div class="t-res" style="font-size:.78em;margin-bottom:10px;padding:8px 12px;background:var(--bg-zebra)">用 N 个随机点估计定积分 <b>∫<sub>a</sub><sup>b</sup>f(x)dx</b>。上图: 采样点与函数曲线；下图: 估计值随 N 收敛（误差 ∝ 1/√N）</div>'+
+  '<label class="t-lbl">f(x) 表达式</label><input class="t-in" id="mcF0" value="sin(x)*x" spellcheck="false">'+
+  '<div class="t-row"><label class="t-lbl">a</label><input class="t-in" id="mcA0" value="0" style="width:80px"><label class="t-lbl" style="margin-left:8px">b</label><input class="t-in" id="mcB0" value="3.14159" style="width:80px"><label class="t-lbl" style="margin-left:8px">N</label><input class="t-in" id="mcN0" value="5000" style="width:90px"></div>'+
+  '<div class="t-row"><button class="t-btn" id="mcRun0">运行</button></div>'+
+  '<canvas class="t-cv" id="mcCv0a" style="width:100%;height:220px"></canvas>'+
+  '<canvas class="t-cv" id="mcCv0b" style="width:100%;height:220px;margin-top:6px"></canvas>'+
+  '<div class="t-res" id="mcR0"></div>'+
+'</div>'+
+'<div id="mcP1" style="display:none">'+
+  '<div class="t-res" style="font-size:.78em;margin-bottom:10px;padding:8px 12px;background:var(--bg-zebra)">在单位正方形随机撒点，落入内切圆 (x²+y²≤1) 的比例 × 4 ≈ π。经典 hit-or-miss 方法。</div>'+
+  '<div class="t-row"><label class="t-lbl">采样数 N</label><input class="t-in" id="mcN1" value="10000" style="width:120px"></div>'+
+  '<div class="t-row"><button class="t-btn" id="mcRun1">开始</button><button class="t-btn t-btn-o" id="mcStop1">停止</button></div>'+
+  '<canvas class="t-cv" id="mcCv1" style="width:100%;height:280px"></canvas>'+
+  '<div class="t-res" id="mcR1"></div>'+
+'</div>'+
+'<div id="mcP2" style="display:none">'+
+  '<div class="t-res" style="font-size:.78em;margin-bottom:10px;padding:8px 12px;background:var(--bg-zebra)">Von Neumann 舍选法: 在 [a,b]×[0,M] 均匀撒点，保留 y≤f(x) 的样本，实现从任意 PDF 采样。上图: 接受/拒绝点；下图: 采样直方图。</div>'+
+  '<label class="t-lbl">目标 PDF f(x)</label><input class="t-in" id="mcF2" value="exp(-x^2/2)" spellcheck="false">'+
+  '<div class="t-row"><label class="t-lbl">a</label><input class="t-in" id="mcA2" value="-4" style="width:70px"><label class="t-lbl" style="margin-left:8px">b</label><input class="t-in" id="mcB2" value="4" style="width:70px"><label class="t-lbl" style="margin-left:8px">M(上界)</label><input class="t-in" id="mcM2" placeholder="自动" style="width:70px"><label class="t-lbl" style="margin-left:8px">N</label><input class="t-in" id="mcN2" value="8000" style="width:80px"></div>'+
+  '<div class="t-row">预设: <span class="t-btn t-btn-o" style="font-size:12px;padding:4px 8px" id="mcPre2a">高斯</span> <span class="t-btn t-btn-o" style="font-size:12px;padding:4px 8px" id="mcPre2b">sin²(x)</span></div>'+
+  '<div class="t-row"><button class="t-btn" id="mcRun2">运行</button></div>'+
+  '<canvas class="t-cv" id="mcCv2a" style="width:100%;height:220px"></canvas>'+
+  '<canvas class="t-cv" id="mcCv2b" style="width:100%;height:220px;margin-top:6px"></canvas>'+
+  '<div class="t-res" id="mcR2"></div>'+
+'</div>'+
+'<div id="mcP3" style="display:none">'+
+  '<div class="t-res" style="font-size:.78em;margin-bottom:10px;padding:8px 12px;background:var(--bg-zebra)">Metropolis-Hastings 算法: 从目标分布 π(x)∝f(x) 采样。σ 控制提议步长，Burn-in 丢弃初始样本以消除初始状态偏差。上图: 马尔可夫链轨迹；下图: 采样直方图 vs 目标。</div>'+
+  '<label class="t-lbl">目标分布 π(x) ∝ f(x)</label><input class="t-in" id="mcF3" value="exp(-x^2/2)" spellcheck="false">'+
+  '<div class="t-row" style="flex-wrap:wrap"><label class="t-lbl">x₀</label><input class="t-in" id="mcX3" value="0" style="width:60px"><label class="t-lbl" style="margin-left:8px">σ</label><input class="t-in" id="mcS3" value="1" style="width:60px"><label class="t-lbl" style="margin-left:8px">N</label><input class="t-in" id="mcN3" value="10000" style="width:80px"><label class="t-lbl" style="margin-left:8px">Burn-in</label><input class="t-in" id="mcB3" value="1000" style="width:80px"></div>'+
+  '<div class="t-row">预设: <span class="t-btn t-btn-o" style="font-size:12px;padding:4px 8px" id="mcPre3a">标准正态</span> <span class="t-btn t-btn-o" style="font-size:12px;padding:4px 8px" id="mcPre3b">双峰</span></div>'+
+  '<div class="t-row"><button class="t-btn" id="mcRun3">运行</button></div>'+
+  '<canvas class="t-cv" id="mcCv3a" style="width:100%;height:220px"></canvas>'+
+  '<canvas class="t-cv" id="mcCv3b" style="width:100%;height:220px;margin-top:6px"></canvas>'+
+  '<div class="t-res" id="mcR3"></div>'+
+'</div>'+
+'<div id="mcP4" style="display:none">'+
+  '<div class="t-res" style="font-size:.78em;margin-bottom:10px;padding:8px 12px;background:var(--bg-zebra)">2D 简单随机游走: 每步等概率选择 ↑↓←→ 移动一格。均方位移 ⟨R²⟩ ∝ N（扩散律），上图: 轨迹；下图: |R| 随步数变化。</div>'+
+  '<div class="t-row"><label class="t-lbl">步数 N</label><input class="t-in" id="mcN4" value="500" style="width:90px"><label class="t-lbl" style="margin-left:8px">轨迹数 M</label><input class="t-in" id="mcM4" value="5" style="width:70px"></div>'+
+  '<div class="t-row">预设: <span class="t-btn t-btn-o" style="font-size:12px;padding:4px 8px" id="mcPre4a">短程 (N=100,M=20)</span> <span class="t-btn t-btn-o" style="font-size:12px;padding:4px 8px" id="mcPre4b">长程 (N=2000,M=5)</span></div>'+
+  '<div class="t-row"><button class="t-btn" id="mcRun4">运行</button></div>'+
+  '<canvas class="t-cv" id="mcCv4a" style="width:100%;height:300px"></canvas>'+
+  '<canvas class="t-cv" id="mcCv4b" style="width:100%;height:220px;margin-top:6px"></canvas>'+
+  '<div class="t-res" id="mcR4"></div>'+
+'</div>'+
+'<div id="mcP5" style="display:none">'+
+  '<div id="mcDesc5" class="t-res" style="font-size:.78em;margin-bottom:10px;padding:8px 12px;background:var(--bg-zebra)">2D 正方格子 Ising 模型（Metropolis 算法）。每个格点自旋 σ=±1，哈密顿量 H = −J Σ σᵢσⱼ。温度 T 以 J/k<sub>B</sub> 为单位 (J=k<sub>B</sub>=1)，临界温度 T<sub>c</sub> = 2/ln(1+√2) ≈ 2.269：低温铁磁有序，高温顺磁无序。</div>'+
+  '<div class="t-row" style="flex-wrap:wrap"><label class="t-lbl">格子 L</label><input type="range" id="mcL5" min="8" max="80" value="16" style="width:120px"><span id="mcL5v">16</span><label class="t-lbl" style="margin-left:12px">温度 T</label><input type="range" id="mcT5" min="0.5" max="5.0" step="0.1" value="2.3" style="width:140px"><span id="mcT5v">2.30</span></div>'+
+  '<div class="t-row" style="flex-wrap:wrap">预设: <span class="t-btn t-btn-o" style="font-size:12px;padding:4px 8px" id="mcPre5a">低温有序 T=1.5</span> <span class="t-btn t-btn-o" style="font-size:12px;padding:4px 8px" id="mcPre5b">临界点 T=2.27</span> <span class="t-btn t-btn-o" style="font-size:12px;padding:4px 8px" id="mcPre5c">高温无序 T=4.0</span></div>'+
+  '<div class="t-row"><button class="t-btn" id="mcPlay5">▶ Play</button><button class="t-btn t-btn-o" id="mcPause5">⏸ Pause</button><button class="t-btn t-btn-o" id="mcReset5">↺ Reset</button></div>'+
+  '<canvas class="t-cv" id="mcCv5a" style="width:100%;height:320px"></canvas>'+
+  '<canvas class="t-cv" id="mcCv5b" style="width:100%;height:200px;margin-top:6px"></canvas>'+
+  '<div class="t-res" id="mcR5"></div>'+
+'</div>';},
+
+async init(el){
+  var math=await loadMath();
+  var q=function(s){return el.querySelector(s)};
+  var qa=function(s){return el.querySelectorAll(s)};
+  var cs=getComputedStyle(document.documentElement);
+  var C_ACCENT=cs.getPropertyValue('--accent').trim()||'#5B8BA4';
+  var C_FONT1=cs.getPropertyValue('--font-color-1').trim()||'#333';
+  var dpr=window.devicePixelRatio||1;
+  var rafId=null;
+  var curTab=0;
+  var PAD={l:45,r:15,t:15,b:30};
+  var TOTAL_TABS=6;
+
+  /* ========== Tab 切换 ========== */
+  var tabNames=['MC 积分','估算 π','舍选法','MCMC','随机游走','Ising 模型'];
+  var tabsEl=q('#mcTabs');
+  tabNames.forEach(function(n,i){
+    var b=document.createElement('span');
+    b.textContent=n;
+    b.className=i===0?'t-btn':'t-btn t-btn-o';
+    if(i===0)b.style.fontWeight='700';
+    b.style.cursor='pointer';
+    b.onclick=function(){switchTab(i)};
+    tabsEl.appendChild(b);
+  });
+
+  function stopAnim(){if(rafId){cancelAnimationFrame(rafId);rafId=null}}
+  function switchTab(i){
+    stopAnim();piRunning=false;isingRunning=false;curTab=i;
+    var btns=tabsEl.children;
+    for(var j=0;j<btns.length;j++){
+      btns[j].className=j===i?'t-btn':'t-btn t-btn-o';
+      btns[j].style.fontWeight=j===i?'700':'';
+    }
+    for(var j=0;j<TOTAL_TABS;j++){
+      var p=q('#mcP'+j);
+      if(p)p.style.display=j===i?'':'none';
+    }
+  }
+
+  /* ========== Canvas 工具 ========== */
+  function setupCanvas(cv){
+    var rect=cv.getBoundingClientRect();
+    var w=rect.width,h=rect.height;
+    cv.width=w*dpr;cv.height=h*dpr;
+    var ctx=cv.getContext('2d');
+    ctx.scale(dpr,dpr);
+    return{ctx:ctx,w:w,h:h,pw:w-PAD.l-PAD.r,ph:h-PAD.t-PAD.b};
+  }
+
+  function drawAxes(ctx,w,h,xMin,xMax,yMin,yMax,opts){
+    var pw=w-PAD.l-PAD.r,ph=h-PAD.t-PAD.b;
+    ctx.clearRect(0,0,w,h);
+    ctx.strokeStyle='#eee';ctx.lineWidth=1;
+    var nx=5,ny=4;
+    for(var i=0;i<=nx;i++){var x=PAD.l+pw*i/nx;ctx.beginPath();ctx.moveTo(x,PAD.t);ctx.lineTo(x,PAD.t+ph);ctx.stroke()}
+    for(var i=0;i<=ny;i++){var y=PAD.t+ph*i/ny;ctx.beginPath();ctx.moveTo(PAD.l,y);ctx.lineTo(PAD.l+pw,y);ctx.stroke()}
+    ctx.strokeStyle='#333';ctx.lineWidth=1.2;
+    ctx.beginPath();ctx.moveTo(PAD.l,PAD.t+ph);ctx.lineTo(PAD.l+pw,PAD.t+ph);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(PAD.l,PAD.t);ctx.lineTo(PAD.l,PAD.t+ph);ctx.stroke();
+    ctx.fillStyle='#888';ctx.font='10px sans-serif';ctx.textAlign='center';
+    for(var i=0;i<=nx;i++){var v=xMin+(xMax-xMin)*i/nx;ctx.fillText(v.toFixed(2),PAD.l+pw*i/nx,PAD.t+ph+14)}
+    ctx.textAlign='right';
+    for(var i=0;i<=ny;i++){var v=yMax-(yMax-yMin)*i/ny;ctx.fillText(v.toFixed(opts&&opts.yDig!==undefined?opts.yDig:2),PAD.l-4,PAD.t+ph*i/ny+4)}
+    if(opts&&opts.title){ctx.fillStyle=C_FONT1;ctx.font='11px sans-serif';ctx.textAlign='left';ctx.fillText(opts.title,PAD.l+4,PAD.t+12)}
+  }
+
+  function mapX(v,xMin,xMax,pw){return PAD.l+pw*(v-xMin)/(xMax-xMin)}
+  function mapY(v,yMin,yMax,ph){return PAD.t+ph*(1-(v-yMin)/(yMax-yMin))}
+
+  function parseF(expr){
+    var node=math.parse(expr);var code=node.compile();
+    return function(x){try{return code.evaluate({x:x,pi:Math.PI,e:Math.E})}catch(e){return NaN}};
+  }
+
+  function simpson(f,a,b,n){
+    if(n%2!==0)n++;var h=(b-a)/n;var s=f(a)+f(b);
+    for(var i=1;i<n;i++)s+=f(a+i*h)*(i%2===0?2:4);
+    return s*h/3;
+  }
+
+  function randn(){var u1=Math.random(),u2=Math.random();return Math.sqrt(-2*Math.log(u1))*Math.cos(2*Math.PI*u2)}
+
+  /* ========== 模式 0: MC 积分 ========== */
+  q('#mcRun0').onclick=function(){
+    stopAnim();
+    try{
+      var f=parseF(q('#mcF0').value);
+      var a=parseFloat(q('#mcA0').value),b=parseFloat(q('#mcB0').value);
+      var N=parseInt(q('#mcN0').value)||5000;
+      if(isNaN(a)||isNaN(b)||a>=b){q('#mcR0').innerHTML='<span style="color:#f56c6c">区间无效</span>';return}
+      var fmax=0;for(var i=0;i<=200;i++){var v=f(a+(b-a)*i/200);if(v>fmax)fmax=v}fmax*=1.1;if(fmax<=0)fmax=1;
+      var cv0a=q('#mcCv0a'),s0a=setupCanvas(cv0a);
+      drawAxes(s0a.ctx,s0a.w,s0a.h,a,b,0,fmax,{title:'散点图'});
+      s0a.ctx.strokeStyle='#409eff';s0a.ctx.lineWidth=2;s0a.ctx.beginPath();
+      for(var i=0;i<=200;i++){var xi=a+(b-a)*i/200;var yi=f(xi);var px=mapX(xi,a,b,s0a.pw);var py=mapY(yi,0,fmax,s0a.ph);i===0?s0a.ctx.moveTo(px,py):s0a.ctx.lineTo(px,py)}
+      s0a.ctx.stroke();
+      var sum=0,sum2=0;var xs=[],ys=[],hits=[];
+      for(var i=0;i<N;i++){var xi=a+Math.random()*(b-a);var yi=Math.random()*fmax;var fv=f(xi);xs.push(xi);ys.push(yi);hits.push(yi<=fv);sum+=fv;sum2+=fv*fv}
+      for(var i=0;i<N;i++){s0a.ctx.fillStyle=hits[i]?'rgba(103,194,58,0.4)':'rgba(180,180,180,0.3)';s0a.ctx.fillRect(mapX(xs[i],a,b,s0a.pw)-1,mapY(ys[i],0,fmax,s0a.ph)-1,2,2)}
+      var cv0b=q('#mcCv0b'),s0b=setupCanvas(cv0b);
+      var mcEst=(b-a)*sum/N;var se=Math.sqrt(((b-a)*(b-a))*(sum2/N-(sum/N)*(sum/N))/N);
+      var simpVal=simpson(f,a,b,1000);
+      var cumEst=[];var runSum=0;
+      for(var i=0;i<N;i++){runSum+=f(xs[i]);cumEst.push((b-a)*runSum/(i+1))}
+      var eMin=cumEst[0],eMax=cumEst[0];
+      for(var i=0;i<cumEst.length;i++){if(cumEst[i]<eMin)eMin=cumEst[i];if(cumEst[i]>eMax)eMax=cumEst[i]}
+      var pad2=(eMax-eMin)*0.15||1;eMin-=pad2;eMax+=pad2;
+      drawAxes(s0b.ctx,s0b.w,s0b.h,0,N,eMin,eMax,{title:'收敛曲线'});
+      s0b.ctx.strokeStyle='#f56c6c';s0b.ctx.lineWidth=1.2;s0b.ctx.setLineDash([6,4]);s0b.ctx.beginPath();
+      var refY=mapY(simpVal,eMin,eMax,s0b.ph);s0b.ctx.moveTo(PAD.l,refY);s0b.ctx.lineTo(PAD.l+s0b.pw,refY);s0b.ctx.stroke();s0b.ctx.setLineDash([]);
+      s0b.ctx.strokeStyle=C_ACCENT;s0b.ctx.lineWidth=1.5;s0b.ctx.beginPath();
+      var step=Math.max(1,Math.floor(N/500));
+      for(var i=0;i<N;i+=step){var px=mapX(i,0,N,s0b.pw);var py=mapY(cumEst[i],eMin,eMax,s0b.ph);i===0?s0b.ctx.moveTo(px,py):s0b.ctx.lineTo(px,py)}
+      s0b.ctx.stroke();
+      var relErr=simpVal!==0?Math.abs(mcEst-simpVal)/Math.abs(simpVal)*100:0;
+      q('#mcR0').innerHTML='MC 估计值: <b>'+mcEst.toFixed(6)+'</b> ± '+se.toFixed(6)+'<br>Simpson 参考: <b>'+simpVal.toFixed(6)+'</b><br>相对误差: <b>'+relErr.toFixed(3)+'%</b>';
+    }catch(e){q('#mcR0').innerHTML='<span style="color:#f56c6c">'+e.message+'</span>'}
+  };
+
+  /* ========== 模式 1: 估算 π ========== */
+  var piRunning=false;
+  q('#mcRun1').onclick=function(){
+    stopAnim();piRunning=true;
+    var N=parseInt(q('#mcN1').value)||10000;
+    var cv1=q('#mcCv1'),s1=setupCanvas(cv1);
+    drawAxes(s1.ctx,s1.w,s1.h,-1,1,-1,1,{title:'估算 π'});
+    var cx=mapX(0,-1,1,s1.pw),cy=mapY(0,-1,1,s1.ph);
+    var rx=s1.pw/2,ry=s1.ph/2;
+    s1.ctx.strokeStyle='#409eff';s1.ctx.lineWidth=1.5;s1.ctx.beginPath();s1.ctx.ellipse(cx,cy,rx,ry,0,0,2*Math.PI);s1.ctx.stroke();
+    var inside=0,total=0,batch=50;
+    function tick(){
+      if(!piRunning||total>=N)return;
+      for(var i=0;i<batch&&total<N;i++){
+        var x=Math.random()*2-1,y=Math.random()*2-1;
+        var inC=x*x+y*y<=1;if(inC)inside++;total++;
+        s1.ctx.fillStyle=inC?'rgba(103,194,58,0.5)':'rgba(180,180,180,0.35)';
+        s1.ctx.fillRect(mapX(x,-1,1,s1.pw)-1,mapY(y,-1,1,s1.ph)-1,2.5,2.5);
+      }
+      var est=4*inside/total;
+      q('#mcR1').innerHTML='采样: <b>'+total+'/'+N+'</b> | π ≈ <b>'+est.toFixed(6)+'</b> | 误差: <b>'+(Math.abs(est-Math.PI)/Math.PI*100).toFixed(3)+'%</b>';
+      if(total<N){rafId=requestAnimationFrame(tick)}else{piRunning=false}
+    }
+    rafId=requestAnimationFrame(tick);
+  };
+  q('#mcStop1').onclick=function(){piRunning=false;stopAnim()};
+
+  /* ========== 模式 2: 舍选法 ========== */
+  q('#mcPre2a').onclick=function(){q('#mcF2').value='exp(-x^2/2)';q('#mcA2').value='-4';q('#mcB2').value='4';q('#mcM2').value=''};
+  q('#mcPre2b').onclick=function(){q('#mcF2').value='sin(x)^2';q('#mcA2').value='0';q('#mcB2').value='3.14159265';q('#mcM2').value=''};
+
+  q('#mcRun2').onclick=function(){
+    stopAnim();
+    try{
+      var f=parseF(q('#mcF2').value);
+      var a=parseFloat(q('#mcA2').value),b=parseFloat(q('#mcB2').value);
+      var N=parseInt(q('#mcN2').value)||8000;
+      if(isNaN(a)||isNaN(b)||a>=b){q('#mcR2').innerHTML='<span style="color:#f56c6c">区间无效</span>';return}
+      var M=parseFloat(q('#mcM2').value);
+      if(isNaN(M)||M<=0){M=0;for(var i=0;i<=200;i++){var v=f(a+(b-a)*i/200);if(v>M)M=v}M*=1.05;if(M<=0)M=1}
+      var accepted=[],rejected=[];
+      for(var i=0;i<N;i++){
+        var x=a+Math.random()*(b-a);var u=Math.random()*M;var fv=f(x);
+        if(u<fv){accepted.push({x:x,y:u})}else{rejected.push({x:x,y:u})}
+      }
+      var cv2a=q('#mcCv2a'),s2a=setupCanvas(cv2a);
+      drawAxes(s2a.ctx,s2a.w,s2a.h,a,b,0,M,{title:'舍选法散点'});
+      s2a.ctx.strokeStyle='#409eff';s2a.ctx.lineWidth=2;s2a.ctx.beginPath();
+      for(var i=0;i<=200;i++){var xi=a+(b-a)*i/200;var yi=f(xi);var px=mapX(xi,a,b,s2a.pw);var py=mapY(yi,0,M,s2a.ph);i===0?s2a.ctx.moveTo(px,py):s2a.ctx.lineTo(px,py)}
+      s2a.ctx.stroke();
+      for(var i=0;i<rejected.length;i++){s2a.ctx.fillStyle='rgba(180,180,180,0.3)';s2a.ctx.fillRect(mapX(rejected[i].x,a,b,s2a.pw)-1,mapY(rejected[i].y,0,M,s2a.ph)-1,2,2)}
+      for(var i=0;i<accepted.length;i++){s2a.ctx.fillStyle='rgba(103,194,58,0.45)';s2a.ctx.fillRect(mapX(accepted[i].x,a,b,s2a.pw)-1,mapY(accepted[i].y,0,M,s2a.ph)-1,2,2)}
+      var cv2b=q('#mcCv2b'),s2b=setupCanvas(cv2b);
+      var bins=30,binW=(b-a)/bins,counts=[];for(var i=0;i<bins;i++)counts.push(0);
+      for(var i=0;i<accepted.length;i++){var bi=Math.floor((accepted[i].x-a)/binW);if(bi>=bins)bi=bins-1;if(bi<0)bi=0;counts[bi]++}
+      var maxC=0;for(var i=0;i<bins;i++)if(counts[i]>maxC)maxC=counts[i];
+      var fMaxV=0;for(var i=0;i<=200;i++){var v=f(a+(b-a)*i/200);if(v>fMaxV)fMaxV=v}
+      var scale=fMaxV>0?maxC/fMaxV:1;
+      drawAxes(s2b.ctx,s2b.w,s2b.h,a,b,0,maxC*1.1,{title:'接受样本直方图',yDig:0});
+      s2b.ctx.fillStyle='rgba(103,194,58,0.5)';
+      for(var i=0;i<bins;i++){
+        var bx=mapX(a+i*binW,a,b,s2b.pw);var bx2=mapX(a+(i+1)*binW,a,b,s2b.pw);
+        var by=mapY(counts[i],0,maxC*1.1,s2b.ph);var by0=mapY(0,0,maxC*1.1,s2b.ph);
+        s2b.ctx.fillRect(bx,by,bx2-bx-1,by0-by);
+      }
+      s2b.ctx.strokeStyle='#f56c6c';s2b.ctx.lineWidth=2;s2b.ctx.beginPath();
+      for(var i=0;i<=200;i++){var xi=a+(b-a)*i/200;var yi=f(xi)*scale;var px=mapX(xi,a,b,s2b.pw);var py=mapY(yi,0,maxC*1.1,s2b.ph);i===0?s2b.ctx.moveTo(px,py):s2b.ctx.lineTo(px,py)}
+      s2b.ctx.stroke();
+      var rate=(accepted.length/N*100).toFixed(1);
+      q('#mcR2').innerHTML='接受率: <b>'+rate+'%</b> ('+accepted.length+'/'+N+')<br>有效样本数: <b>'+accepted.length+'</b> | 包络上界 M: '+M.toFixed(4);
+    }catch(e){q('#mcR2').innerHTML='<span style="color:#f56c6c">'+e.message+'</span>'}
+  };
+
+  /* ========== 模式 3: MCMC Metropolis-Hastings ========== */
+  q('#mcPre3a').onclick=function(){q('#mcF3').value='exp(-x^2/2)';q('#mcX3').value='0';q('#mcS3').value='1'};
+  q('#mcPre3b').onclick=function(){q('#mcF3').value='exp(-(x-3)^2/2)+0.5*exp(-(x+2)^2/(2*0.5^2))';q('#mcX3').value='0';q('#mcS3').value='1.5'};
+
+  q('#mcRun3').onclick=function(){
+    stopAnim();
+    try{
+      var f=parseF(q('#mcF3').value);
+      var x0=parseFloat(q('#mcX3').value)||0;
+      var sigma=parseFloat(q('#mcS3').value)||1;
+      var N=parseInt(q('#mcN3').value)||10000;
+      var burnin=parseInt(q('#mcB3').value)||1000;
+      if(burnin>=N){q('#mcR3').innerHTML='<span style="color:#f56c6c">Burn-in 须小于 N</span>';return}
+      var chain=[x0],accepts=0;
+      var cur=x0,curF=f(cur);
+      for(var i=1;i<N;i++){
+        var prop=cur+sigma*randn();
+        var propF=f(prop);
+        var alpha=curF>0?Math.min(1,propF/curF):1;
+        if(Math.random()<alpha){cur=prop;curF=propF;accepts++}
+        chain.push(cur);
+      }
+      var cv3a=q('#mcCv3a'),s3a=setupCanvas(cv3a);
+      var cMin=chain[0],cMax=chain[0];
+      for(var i=0;i<chain.length;i++){if(chain[i]<cMin)cMin=chain[i];if(chain[i]>cMax)cMax=chain[i]}
+      var cPad=(cMax-cMin)*0.08||1;cMin-=cPad;cMax+=cPad;
+      drawAxes(s3a.ctx,s3a.w,s3a.h,0,N,cMin,cMax,{title:'链轨迹 (Trace Plot)'});
+      var burnX=mapX(burnin,0,N,s3a.pw);
+      s3a.ctx.fillStyle='rgba(180,180,180,0.15)';
+      s3a.ctx.fillRect(PAD.l,PAD.t,burnX-PAD.l,s3a.ph);
+      s3a.ctx.fillStyle='#888';s3a.ctx.font='10px sans-serif';s3a.ctx.textAlign='center';
+      s3a.ctx.fillText('burn-in',(PAD.l+burnX)/2,PAD.t+s3a.ph/2);
+      s3a.ctx.strokeStyle=C_ACCENT;s3a.ctx.lineWidth=0.8;s3a.ctx.beginPath();
+      var step3=Math.max(1,Math.floor(N/800));
+      for(var i=0;i<N;i+=step3){var px=mapX(i,0,N,s3a.pw);var py=mapY(chain[i],cMin,cMax,s3a.ph);i===0?s3a.ctx.moveTo(px,py):s3a.ctx.lineTo(px,py)}
+      s3a.ctx.stroke();
+      var cv3b=q('#mcCv3b'),s3b=setupCanvas(cv3b);
+      var samples=chain.slice(burnin);
+      var sMin=samples[0],sMax=samples[0];
+      for(var i=0;i<samples.length;i++){if(samples[i]<sMin)sMin=samples[i];if(samples[i]>sMax)sMax=samples[i]}
+      var sPad=(sMax-sMin)*0.08||1;sMin-=sPad;sMax+=sPad;
+      var hBins=40,hW=(sMax-sMin)/hBins,hCounts=[];for(var i=0;i<hBins;i++)hCounts.push(0);
+      for(var i=0;i<samples.length;i++){var bi=Math.floor((samples[i]-sMin)/hW);if(bi>=hBins)bi=hBins-1;if(bi<0)bi=0;hCounts[bi]++}
+      var hMax=0;for(var i=0;i<hBins;i++)if(hCounts[i]>hMax)hMax=hCounts[i];
+      drawAxes(s3b.ctx,s3b.w,s3b.h,sMin,sMax,0,hMax*1.15,{title:'后验直方图',yDig:0});
+      s3b.ctx.fillStyle='rgba(64,158,255,0.45)';
+      for(var i=0;i<hBins;i++){
+        var bx=mapX(sMin+i*hW,sMin,sMax,s3b.pw);var bx2=mapX(sMin+(i+1)*hW,sMin,sMax,s3b.pw);
+        var by=mapY(hCounts[i],0,hMax*1.15,s3b.ph);var by0=mapY(0,0,hMax*1.15,s3b.ph);
+        s3b.ctx.fillRect(bx,by,bx2-bx-1,by0-by);
+      }
+      var fMaxV=0;for(var i=0;i<=200;i++){var v=f(sMin+(sMax-sMin)*i/200);if(v>fMaxV)fMaxV=v}
+      var fScale=fMaxV>0?hMax/fMaxV:1;
+      s3b.ctx.strokeStyle='#f56c6c';s3b.ctx.lineWidth=2;s3b.ctx.beginPath();
+      for(var i=0;i<=200;i++){var xi=sMin+(sMax-sMin)*i/200;var yi=f(xi)*fScale;var px=mapX(xi,sMin,sMax,s3b.pw);var py=mapY(yi,0,hMax*1.15,s3b.ph);i===0?s3b.ctx.moveTo(px,py):s3b.ctx.lineTo(px,py)}
+      s3b.ctx.stroke();
+      var sMean=0;for(var i=0;i<samples.length;i++)sMean+=samples[i];sMean/=samples.length;
+      var sVar=0;for(var i=0;i<samples.length;i++)sVar+=(samples[i]-sMean)*(samples[i]-sMean);sVar/=(samples.length-1);
+      var sStd=Math.sqrt(sVar);
+      var accRate=(accepts/(N-1)*100).toFixed(1);
+      q('#mcR3').innerHTML='总接受率: <b>'+accRate+'%</b><br>样本均值: <b>'+sMean.toFixed(4)+'</b> | 样本标准差: <b>'+sStd.toFixed(4)+'</b><br>有效样本数: <b>'+samples.length+'</b> (去除 '+burnin+' burn-in)';
+    }catch(e){q('#mcR3').innerHTML='<span style="color:#f56c6c">'+e.message+'</span>'}
+  };
+
+  /* ========== 模式 4: 随机游走 ========== */
+  var WALK_COLORS=['#e63946','#457b9d','#2a9d8f','#e9c46a','#f4a261','#264653','#6a4c93','#1982c4','#8ac926','#ff595e','#ff924c','#ffca3a','#c77dff','#72efdd','#480ca8','#3a86ff','#8338ec','#fb5607','#06d6a0','#118ab2'];
+
+  q('#mcPre4a').onclick=function(){q('#mcN4').value='100';q('#mcM4').value='20'};
+  q('#mcPre4b').onclick=function(){q('#mcN4').value='2000';q('#mcM4').value='5'};
+
+  q('#mcRun4').onclick=function(){
+    stopAnim();
+    var N=parseInt(q('#mcN4').value)||500;
+    var M=parseInt(q('#mcM4').value)||5;
+    if(N<1)N=1;if(M<1)M=1;if(M>50)M=50;
+    var dirs=[[1,0],[-1,0],[0,1],[0,-1]];
+    var trails=[];
+    var allEndX=[],allEndY=[];
+    var globalMinX=0,globalMaxX=0,globalMinY=0,globalMaxY=0;
+    for(var m=0;m<M;m++){
+      var tx=[0],ty=[0];
+      var cx=0,cy=0;
+      for(var s=0;s<N;s++){
+        var d=dirs[Math.floor(Math.random()*4)];
+        cx+=d[0];cy+=d[1];
+        tx.push(cx);ty.push(cy);
+        if(cx<globalMinX)globalMinX=cx;if(cx>globalMaxX)globalMaxX=cx;
+        if(cy<globalMinY)globalMinY=cy;if(cy>globalMaxY)globalMaxY=cy;
+      }
+      trails.push({x:tx,y:ty});
+      allEndX.push(cx);allEndY.push(cy);
+    }
+    var padW=Math.max(5,Math.ceil((globalMaxX-globalMinX)*0.1));
+    var padH=Math.max(5,Math.ceil((globalMaxY-globalMinY)*0.1));
+    globalMinX-=padW;globalMaxX+=padW;globalMinY-=padH;globalMaxY+=padH;
+    var rangeX=globalMaxX-globalMinX;
+    var rangeY=globalMaxY-globalMinY;
+    if(rangeX>rangeY){var dd=(rangeX-rangeY)/2;globalMinY-=dd;globalMaxY+=dd}
+    else{var dd=(rangeY-rangeX)/2;globalMinX-=dd;globalMaxX+=dd}
+
+    var cv4a=q('#mcCv4a'),s4a=setupCanvas(cv4a);
+    var pw4=s4a.pw,ph4=s4a.ph;
+    function mx4(v){return PAD.l+pw4*(v-globalMinX)/(globalMaxX-globalMinX)}
+    function my4(v){return PAD.t+ph4*(1-(v-globalMinY)/(globalMaxY-globalMinY))}
+
+    var drawnUpTo=0;
+    var stepsPerFrame=Math.max(1,Math.floor(N/120));
+
+    drawAxes(s4a.ctx,s4a.w,s4a.h,globalMinX,globalMaxX,globalMinY,globalMaxY,{title:'2D 格点随机游走',yDig:0});
+    s4a.ctx.fillStyle='#333';s4a.ctx.beginPath();s4a.ctx.arc(mx4(0),my4(0),4,0,2*Math.PI);s4a.ctx.fill();
+
+    function animWalk(){
+      var nextUpTo=Math.min(N,drawnUpTo+stepsPerFrame);
+      for(var m=0;m<M;m++){
+        var col=WALK_COLORS[m%WALK_COLORS.length];
+        s4a.ctx.strokeStyle=col;s4a.ctx.lineWidth=1.2;s4a.ctx.globalAlpha=0.7;
+        s4a.ctx.beginPath();
+        s4a.ctx.moveTo(mx4(trails[m].x[drawnUpTo]),my4(trails[m].y[drawnUpTo]));
+        for(var ss=drawnUpTo+1;ss<=nextUpTo;ss++){
+          s4a.ctx.lineTo(mx4(trails[m].x[ss]),my4(trails[m].y[ss]));
+        }
+        s4a.ctx.stroke();
+        s4a.ctx.globalAlpha=1.0;
+        if(nextUpTo<N){
+          s4a.ctx.fillStyle=col;s4a.ctx.beginPath();
+          s4a.ctx.arc(mx4(trails[m].x[nextUpTo]),my4(trails[m].y[nextUpTo]),2.5,0,2*Math.PI);
+          s4a.ctx.fill();
+        }
+      }
+      drawnUpTo=nextUpTo;
+      if(drawnUpTo<N){
+        rafId=requestAnimationFrame(animWalk);
+      }else{
+        for(var m=0;m<M;m++){
+          var col=WALK_COLORS[m%WALK_COLORS.length];
+          s4a.ctx.fillStyle=col;s4a.ctx.beginPath();
+          s4a.ctx.arc(mx4(allEndX[m]),my4(allEndY[m]),4,0,2*Math.PI);s4a.ctx.fill();
+          s4a.ctx.strokeStyle='#fff';s4a.ctx.lineWidth=1;s4a.ctx.beginPath();
+          s4a.ctx.arc(mx4(allEndX[m]),my4(allEndY[m]),4,0,2*Math.PI);s4a.ctx.stroke();
+        }
+        drawEndpoints4();
+        showWalkStats4();
+      }
+    }
+    rafId=requestAnimationFrame(animWalk);
+
+    function drawEndpoints4(){
+      var cv4b=q('#mcCv4b'),s4b=setupCanvas(cv4b);
+      var exMin=allEndX[0],exMax=allEndX[0],eyMin=allEndY[0],eyMax=allEndY[0];
+      for(var i=0;i<M;i++){
+        if(allEndX[i]<exMin)exMin=allEndX[i];if(allEndX[i]>exMax)exMax=allEndX[i];
+        if(allEndY[i]<eyMin)eyMin=allEndY[i];if(allEndY[i]>eyMax)eyMax=allEndY[i];
+      }
+      var ep=Math.max(5,Math.ceil(Math.max(exMax-exMin,eyMax-eyMin)*0.2));
+      exMin-=ep;exMax+=ep;eyMin-=ep;eyMax+=ep;
+      var rx2=exMax-exMin,ry2=eyMax-eyMin;
+      if(rx2>ry2){var dd=(rx2-ry2)/2;eyMin-=dd;eyMax+=dd}else{var dd=(ry2-rx2)/2;exMin-=dd;exMax+=dd}
+      drawAxes(s4b.ctx,s4b.w,s4b.h,exMin,exMax,eyMin,eyMax,{title:'终点分布',yDig:0});
+      var ox=mapX(0,exMin,exMax,s4b.pw),oy=mapY(0,eyMin,eyMax,s4b.ph);
+      s4b.ctx.strokeStyle='#ccc';s4b.ctx.lineWidth=1;s4b.ctx.setLineDash([4,4]);
+      s4b.ctx.beginPath();s4b.ctx.moveTo(ox,PAD.t);s4b.ctx.lineTo(ox,PAD.t+s4b.ph);s4b.ctx.stroke();
+      s4b.ctx.beginPath();s4b.ctx.moveTo(PAD.l,oy);s4b.ctx.lineTo(PAD.l+s4b.pw,oy);s4b.ctx.stroke();
+      s4b.ctx.setLineDash([]);
+      for(var i=0;i<M;i++){
+        var col=WALK_COLORS[i%WALK_COLORS.length];
+        s4b.ctx.fillStyle=col;s4b.ctx.beginPath();
+        s4b.ctx.arc(mapX(allEndX[i],exMin,exMax,s4b.pw),mapY(allEndY[i],eyMin,eyMax,s4b.ph),5,0,2*Math.PI);
+        s4b.ctx.fill();
+        s4b.ctx.strokeStyle='#fff';s4b.ctx.lineWidth=1;s4b.ctx.beginPath();
+        s4b.ctx.arc(mapX(allEndX[i],exMin,exMax,s4b.pw),mapY(allEndY[i],eyMin,eyMax,s4b.ph),5,0,2*Math.PI);
+        s4b.ctx.stroke();
+      }
+    }
+
+    function showWalkStats4(){
+      var sumR=0,sumR2=0;
+      for(var i=0;i<M;i++){
+        var r=Math.sqrt(allEndX[i]*allEndX[i]+allEndY[i]*allEndY[i]);
+        sumR+=r;sumR2+=r*r;
+      }
+      var avgR=sumR/M;
+      var rms=Math.sqrt(sumR2/M);
+      var theory=Math.sqrt(N);
+      q('#mcR4').innerHTML='轨迹数: <b>'+M+'</b> | 步数: <b>'+N+'</b><br>平均位移 ⟨r⟩: <b>'+avgR.toFixed(2)+'</b><br>均方根位移 √⟨r²⟩: <b>'+rms.toFixed(2)+'</b><br>理论值 √N: <b>'+theory.toFixed(2)+'</b>';
+    }
+  };
+
+  /* ========== 模式 5: Ising 模型 ========== */
+  var isingRunning=false;
+  var isingSpins=null;
+  var isingSweeps=0;
+  var isingMagHistory=[];
+
+  q('#mcL5').oninput=function(){q('#mcL5v').textContent=this.value};
+  q('#mcT5').oninput=function(){q('#mcT5v').textContent=parseFloat(this.value).toFixed(2)};
+
+  q('#mcPre5a').onclick=function(){q('#mcT5').value='1.5';q('#mcT5v').textContent='1.50'};
+  q('#mcPre5b').onclick=function(){q('#mcT5').value='2.27';q('#mcT5v').textContent='2.27'};
+  q('#mcPre5c').onclick=function(){q('#mcT5').value='4.0';q('#mcT5v').textContent='4.00'};
+
+  function isingInit(){
+    var L=parseInt(q('#mcL5').value)||16;
+    isingSpins=[];
+    for(var i=0;i<L;i++){
+      isingSpins[i]=[];
+      for(var j=0;j<L;j++){
+        isingSpins[i][j]=Math.random()<0.5?1:-1;
+      }
+    }
+    isingSweeps=0;
+    isingMagHistory=[];
+  }
+
+  function isingDrawConfig(){
+    var L=isingSpins.length;
+    var cv5a=q('#mcCv5a');
+    var rect=cv5a.getBoundingClientRect();
+    var w=rect.width,h=rect.height;
+    cv5a.width=w*dpr;cv5a.height=h*dpr;
+    var ctx=cv5a.getContext('2d');
+    ctx.scale(dpr,dpr);
+    var margin=10;
+    var availW=w-2*margin,availH=h-2*margin-20;
+    var cellSize=Math.floor(Math.min(availW/L,availH/L));
+    if(cellSize<2)cellSize=2;
+    var offX=margin+Math.floor((availW-cellSize*L)/2);
+    var offY=margin+20+Math.floor((availH-cellSize*L)/2);
+    ctx.clearRect(0,0,w,h);
+    ctx.fillStyle=C_FONT1;ctx.font='11px sans-serif';ctx.textAlign='left';
+    ctx.fillText('自旋构型 (L='+L+', sweep='+isingSweeps+')',margin,margin+12);
+    for(var i=0;i<L;i++){
+      for(var j=0;j<L;j++){
+        ctx.fillStyle=isingSpins[i][j]===1?C_ACCENT:'#eee';
+        ctx.fillRect(offX+j*cellSize,offY+i*cellSize,cellSize-1,cellSize-1);
+      }
+    }
+  }
+
+  function isingDrawMag(){
+    var cv5b=q('#mcCv5b'),s5b=setupCanvas(cv5b);
+    if(isingMagHistory.length<2){
+      drawAxes(s5b.ctx,s5b.w,s5b.h,0,1,0,1,{title:'|M|/N² vs 扫描次数'});
+      return;
+    }
+    var xMax=isingMagHistory.length-1;
+    var yMin=0,yMax=1.05;
+    drawAxes(s5b.ctx,s5b.w,s5b.h,0,xMax,yMin,yMax,{title:'|M|/N² vs 扫描次数',yDig:2});
+    s5b.ctx.strokeStyle=C_ACCENT;s5b.ctx.lineWidth=1.5;s5b.ctx.beginPath();
+    var step5=Math.max(1,Math.floor(isingMagHistory.length/500));
+    for(var i=0;i<isingMagHistory.length;i+=step5){
+      var px=mapX(i,0,xMax,s5b.pw);
+      var py=mapY(isingMagHistory[i],yMin,yMax,s5b.ph);
+      i===0?s5b.ctx.moveTo(px,py):s5b.ctx.lineTo(px,py);
+    }
+    s5b.ctx.stroke();
+    var T=parseFloat(q('#mcT5').value);
+    s5b.ctx.fillStyle='#888';s5b.ctx.font='10px sans-serif';s5b.ctx.textAlign='right';
+    s5b.ctx.fillText('T='+T.toFixed(2),PAD.l+s5b.pw-4,PAD.t+14);
+  }
+
+  function isingComputeEnergy(){
+    var L=isingSpins.length;
+    var E=0;
+    for(var i=0;i<L;i++){
+      for(var j=0;j<L;j++){
+        var s=isingSpins[i][j];
+        var right=isingSpins[i][(j+1)%L];
+        var down=isingSpins[(i+1)%L][j];
+        E+=-s*(right+down);
+      }
+    }
+    return E;
+  }
+
+  function isingComputeMag(){
+    var L=isingSpins.length;
+    var m=0;
+    for(var i=0;i<L;i++)for(var j=0;j<L;j++)m+=isingSpins[i][j];
+    return Math.abs(m)/(L*L);
+  }
+
+  function isingSweep(){
+    var L=isingSpins.length;
+    var T=parseFloat(q('#mcT5').value)||2.27;
+    var N2=L*L;
+    for(var t=0;t<N2;t++){
+      var i=Math.floor(Math.random()*L);
+      var j=Math.floor(Math.random()*L);
+      var s=isingSpins[i][j];
+      var top=isingSpins[(i-1+L)%L][j];
+      var bottom=isingSpins[(i+1)%L][j];
+      var left=isingSpins[i][(j-1+L)%L];
+      var right=isingSpins[i][(j+1)%L];
+      var dE=2*s*(top+bottom+left+right);
+      if(dE<=0||Math.random()<Math.exp(-dE/T)){
+        isingSpins[i][j]=-s;
+      }
+    }
+    isingSweeps++;
+    isingMagHistory.push(isingComputeMag());
+  }
+
+  function isingUpdateResults(){
+    var L=isingSpins.length;
+    var T=parseFloat(q('#mcT5').value)||2.27;
+    var mag=isingComputeMag();
+    var energy=isingComputeEnergy();
+    q('#mcR5').innerHTML='扫描次数: <b>'+isingSweeps+'</b> | 温度 T: <b>'+T.toFixed(2)+'</b><br>磁化强度 |M|/N²: <b>'+mag.toFixed(4)+'</b><br>能量 E: <b>'+energy+'</b> | 格子: <b>'+L+'×'+L+'</b>';
+  }
+
+  function isingLoop(){
+    if(!isingRunning)return;
+    isingSweep();
+    isingDrawConfig();
+    if(isingSweeps%3===0)isingDrawMag();
+    isingUpdateResults();
+    rafId=requestAnimationFrame(isingLoop);
+  }
+
+  q('#mcPlay5').onclick=function(){
+    stopAnim();
+    if(!isingSpins)isingInit();
+    isingRunning=true;
+    isingLoop();
+  };
+
+  q('#mcPause5').onclick=function(){
+    isingRunning=false;
+    stopAnim();
+  };
+
+  q('#mcReset5').onclick=function(){
+    isingRunning=false;
+    stopAnim();
+    isingInit();
+    isingDrawConfig();
+    isingDrawMag();
+    isingUpdateResults();
+  };
+
+  /* ========== 清理 ========== */
+  el._cleanup=function(){stopAnim();piRunning=false;isingRunning=false};
+}}

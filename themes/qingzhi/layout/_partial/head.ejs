@@ -1,0 +1,63 @@
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport" />
+    <%# ── SEO Meta ── %>
+    <% var pageTitle = (is_post() || is_page()) && page.title ? page.title + ' | ' + config.title : config.title + (config.subtitle ? ' | ' + config.subtitle : ''); %>
+    <% var pageDesc = (is_post() && page.excerpt) ? strip_html(page.excerpt).substring(0, 160).replace(/\n/g, ' ') : (config.description || config.title); %>
+    <% var pageUrl = url_for(page.path || ''); %>
+    <title><%= pageTitle %></title>
+    <meta name="description" content="<%= pageDesc %>" />
+    <meta property="og:title" content="<%= pageTitle %>" />
+    <meta property="og:description" content="<%= pageDesc %>" />
+    <meta property="og:url" content="<%= config.url + '/' + (page.path || '') %>" />
+    <meta property="og:type" content="<%= is_post() ? 'article' : 'website' %>" />
+    <meta property="og:site_name" content="<%= config.title %>" />
+    <meta name="twitter:card" content="summary" />
+    <link rel="canonical" href="<%= config.url + '/' + (page.path || '') %>" />
+    <link rel="alternate" type="application/atom+xml" title="<%= config.title %> RSS" href="<%= url_for('/atom.xml') %>" />
+    <meta name="hexo-theme-qingzhi" content="<%= theme.version %>" />
+    <link rel="alternate icon" type="image/webp" href="<%- url_for(theme.favicon) %>">
+    <%# ── 外部 CDN preconnect ── %>
+    <link rel="preconnect" href="https://cdn.jsdmirror.com" crossorigin />
+    <% if(theme.cdn.enable) { %><link rel="dns-prefetch" href="//jsd.onmicrosoft.cn" /><% } %>
+    <link rel="dns-prefetch" href="//giscus.app" />
+    <link rel="dns-prefetch" href="//events.vercount.one" />
+
+    <%# ── MiSans 字体（jsdmirror 镜像 + 非阻塞加载，避免 CDN 故障阻塞渲染） ── %>
+    <link rel="preload" href="https://cdn.jsdmirror.com/npm/misans@4.1.0/lib/Normal/MiSans-Regular.min.css" as="style" />
+    <link rel="stylesheet" href="https://cdn.jsdmirror.com/npm/misans@4.1.0/lib/Normal/MiSans-Regular.min.css" media="print" onload="this.media='all'" />
+    <link rel="stylesheet" href="https://cdn.jsdmirror.com/npm/misans@4.1.0/lib/Normal/MiSans-Medium.min.css" media="print" onload="this.media='all'" />
+    <link rel="stylesheet" href="https://cdn.jsdmirror.com/npm/misans@4.1.0/lib/Normal/MiSans-Semibold.min.css" media="print" onload="this.media='all'" />
+    <noscript>
+        <link rel="stylesheet" href="https://cdn.jsdmirror.com/npm/misans@4.1.0/lib/Normal/MiSans-Regular.min.css" />
+        <link rel="stylesheet" href="https://cdn.jsdmirror.com/npm/misans@4.1.0/lib/Normal/MiSans-Medium.min.css" />
+        <link rel="stylesheet" href="https://cdn.jsdmirror.com/npm/misans@4.1.0/lib/Normal/MiSans-Semibold.min.css" />
+    </noscript>
+
+    <%# ── CSS 加载（顺序：reset → fonts → base → components → modules） ── %>
+    <% var _p = cdnPrefix(); %>
+    <%- css(_p + 'css/reset.css') %>
+    <%- css(_p + 'css/fonts.css') %>
+    <%- css(_p + 'css/highlight/style1.css') %>
+    <%- css(_p + 'css/markdown.css') %>
+    <% if((is_post() || is_page()) && theme.comment.enable && theme.comment.use === 'waline' && (!page.hasOwnProperty('comment') || page.comment)) { %>
+        <%- css(_p + 'css/waline.css') %>
+    <% } %>
+    <% if(is_post() || is_page()) { %>
+        <%- css('css/lightgallery-bundle.min.css') %>
+    <% } %>
+    <%- css(_p + 'css/style.css') %>
+    <%- css(_p + 'css/ui.css') %>
+    <% if(theme.tool.returnToTop || theme.tool.returnToLast) { %>
+        <%- css('css/returnToTop.css') %>
+        <%- css('css/returnToLastPage.css') %>
+    <% } %>
+    <% if(theme.tool.leftToc) { %>
+        <%- css('css/toc.css') %>
+    <% } %>
+
+    <%# ── 自定义模块 CSS（合并为单文件，减少 HTTP 请求） ── %>
+    <%- css('css/modules.css') %>
+
+    <%# MiSans 已通过 head.ejs <link> 并行加载，无需 @import %>
+</head>

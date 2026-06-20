@@ -1,0 +1,86 @@
+{id:'latex',name:'LaTeX 公式',icon:'📐',cat:'academic',desc:'实时渲染 · 符号键盘 · 下载 SVG/PNG',
+html(){return '<div class="t-lbl">LaTeX 输入</div><textarea class="t-ta" id="latexIn" rows="3">E = mc^2</textarea>'
++'<div class="pk" id="latexKb" style="margin:4px 0"></div>'
++'<div class="t-lbl" style="margin-top:6px">渲染结果</div>'
++'<div id="latexOut" class="t-res" style="text-align:center;font-size:1.2em;min-height:50px"></div>'
++'<div class="t-row" style="justify-content:center;margin-top:6px"><button class="t-btn" id="latexDlSvg" style="font-size:.72em">\u2b07 \u4e0b\u8f7d SVG</button><button class="t-btn t-btn-o" id="latexDlPng" style="font-size:.72em">\u2b07 \u4e0b\u8f7d PNG</button></div>'
++'<details style="margin-top:6px;font-size:.72em;color:#999"><summary style="cursor:pointer">\ud83d\udcd6 \u5e38\u7528\u8bed\u6cd5\u53c2\u8003</summary>'
++'<div style="columns:2;column-gap:12px;margin-top:4px;line-height:1.8">'
++'<code>\\frac{a}{b}</code> \u5206\u6570<br>'
++'<code>\\sqrt{x}</code> \u5e73\u65b9\u6839<br>'
++'<code>\\sqrt[n]{x}</code> n\u6b21\u6839<br>'
++'<code>x^{2}</code> \u4e0a\u6807<br>'
++'<code>x_{i}</code> \u4e0b\u6807<br>'
++'<code>\\sum_{i=0}^{n}</code> \u6c42\u548c<br>'
++'<code>\\prod_{i=1}^{n}</code> \u8fde\u4e58<br>'
++'<code>\\int_a^b</code> \u79ef\u5206<br>'
++'<code>\\lim_{x\\to 0}</code> \u6781\u9650<br>'
++'<code>\\vec{a}</code> \u5411\u91cf<br>'
++'<code>\\hat{a}</code> \u5e3d\u5b50<br>'
++'<code>\\dot{x}</code> \u70b9<br>'
++'<code>\\bar{x}</code> \u6a2a\u7ebf<br>'
++'<code>\\partial</code> \u504f\u5bfc<br>'
++'<code>\\nabla</code> \u68af\u5ea6<br>'
++'<code>\\begin{pmatrix}a&b\\\\c&d\\end{pmatrix}</code> \u77e9\u9635<br>'
++'<code>\\begin{cases}...\\end{cases}</code> \u5206\u6bb5<br>'
++'<code>\\left(\\right)</code> \u81ea\u9002\u5e94\u62ec\u53f7<br>'
++'</div></details>'},
+async init(el){
+  await loadKaTeX();
+  var inp=el.querySelector('#latexIn'),out=el.querySelector('#latexOut');
+  function render(){try{katex.render(inp.value,out,{displayMode:true,throwOnError:false})}catch(e){out.textContent=e.message}}
+  inp.oninput=render;render();
+  /* 符号键盘 */
+  var keys=[
+    ['\\frac{}{}','\\frac{a}{b}'],['\\sqrt{}','\\sqrt{x}'],['\\sqrt[n]{}','\\sqrt[n]{x}'],
+    ['^{}','x^{n}'],['_{}','x_{i}'],['\\sum_{}^{}','\\sum'],['\\prod_{}^{}','\\prod'],
+    ['\\int_{}^{}','\\int'],['\\lim_{}','\\lim'],['\\to','\\to'],['\\infty','\\infty'],
+    ['\\alpha','\\alpha'],['\\beta','\\beta'],['\\gamma','\\gamma'],['\\delta','\\delta'],
+    ['\\theta','\\theta'],['\\lambda','\\lambda'],['\\mu','\\mu'],['\\pi','\\pi'],
+    ['\\sigma','\\sigma'],['\\omega','\\omega'],['\\phi','\\phi'],['\\psi','\\psi'],
+    ['\\partial','\\partial'],['\\nabla','\\nabla'],['\\vec{}','\\vec'],['\\hat{}','\\hat'],
+    ['\\dot{}','\\dot'],['\\bar{}','\\bar'],['\\cdot','\\cdot'],['\\times','\\times'],
+    ['\\div','\\div'],['\\pm','\\pm'],['\\leq','\\leq'],['\\geq','\\geq'],['\\neq','\\neq'],
+    ['\\approx','\\approx'],['\\equiv','\\equiv'],['\\in','\\in'],['\\subset','\\subset'],
+    ['\\cup','\\cup'],['\\cap','\\cap'],['\\forall','\\forall'],['\\exists','\\exists'],
+    ['\\left(\\right)','( )'],['\\left[\\right]','[ ]'],['\\left\\{\\right\\}','\\{ \\}'],
+    ['\\begin{pmatrix}\\end{pmatrix}','matrix'],['\\begin{cases}\\end{cases}','cases'],
+    ['\\text{}','text'],['\\mathbf{}','bf'],['\\mathrm{}','rm']
+  ];
+  var kb=el.querySelector('#latexKb');
+  if(!document.getElementById('pkCSS')){var st=document.createElement('style');st.id='pkCSS';st.textContent='.pk{display:flex;flex-wrap:wrap;gap:3px;justify-content:center}.pk button{background:#f5f7fa;border:1px solid #e4e7ed;border-radius:4px;padding:2px 6px;cursor:pointer;font-size:.7em;font-family:inherit;transition:.15s;color:#606266}.pk button:hover{border-color:#409eff;color:#409eff;background:#ecf5ff}';document.head.appendChild(st)}
+  keys.forEach(function(pair){
+    var insert=pair[0],label=pair[1];
+    var btn=document.createElement('button');btn.textContent=label;btn.title=insert;
+    btn.onclick=function(){
+      var s=inp.selectionStart||0,e=inp.selectionEnd||0;
+      inp.value=inp.value.substring(0,s)+insert+inp.value.substring(e);
+      inp.focus();
+      /* 光标放到第一个 {} 内部 */
+      var brace=insert.indexOf('{}');
+      var pos=brace>=0?s+brace+1:s+insert.length;
+      inp.setSelectionRange(pos,pos);
+      render();
+    };
+    kb.appendChild(btn);
+  });
+  /* SVG 下载 */
+  el.querySelector('#latexDlSvg').onclick=function(){
+    var html=out.innerHTML;if(!html)return;
+    var r=out.getBoundingClientRect();var w=Math.ceil(r.width)+40,h=Math.ceil(r.height)+40;
+    var css='';var links=document.querySelectorAll('link[rel="stylesheet"]');
+    for(var i=0;i<links.length;i++){if(links[i].href.indexOf('katex')>=0)css+='@import url("'+links[i].href+'");\n';}
+    var svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%"><style>'+css+'</style>'+html+'</div></foreignObject></svg>';
+    var blob=new Blob([svg],{type:"image/svg+xml"});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='formula.svg';a.click();setTimeout(function(){URL.revokeObjectURL(a.href)},3e3);
+  };
+  /* PNG 下载 */
+  el.querySelector('#latexDlPng').onclick=function(){
+    var btn=el.querySelector('#latexDlPng');btn.textContent='\u23f3 \u751f\u6210\u4e2d\u2026';btn.disabled=true;
+    var origBg=out.style.background;out.style.background='transparent';
+    loadJS('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js').then(function(){
+      return html2canvas(out,{backgroundColor:null,scale:3});
+    }).then(function(cv){out.style.background=origBg;
+      cv.toBlob(function(blob){var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='formula.png';a.click();setTimeout(function(){URL.revokeObjectURL(a.href)},3e3);btn.textContent='\u2b07 \u4e0b\u8f7d PNG';btn.disabled=false});
+    }).catch(function(){out.style.background=origBg;btn.textContent='\u2b07 \u4e0b\u8f7d PNG';btn.disabled=false});
+  };
+}}

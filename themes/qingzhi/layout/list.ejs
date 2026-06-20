@@ -1,0 +1,102 @@
+<%
+var postArray = site.posts.data.slice();
+postArray.sort(function(a, b) { return b.date - a.date; });
+
+var topPosts = [];
+var yearMap = {};
+var yearOrder = [];
+
+for (var i = 0; i < postArray.length; i++) {
+  var p = postArray[i];
+  if (('hide' in p) && p.hide === true) continue;
+  if ('top' in p) {
+    topPosts.push(p);
+  } else {
+    var yr = new Date(p.date).getFullYear();
+    if (!yearMap[yr]) { yearMap[yr] = []; yearOrder.push(yr); }
+    yearMap[yr].push(p);
+  }
+}
+topPosts.sort(function(a, b) { return a.top - b.top; });
+%>
+
+<!-- 快捷入口 -->
+<div class="wf-browse">
+  <a class="wf-browse-item" href="/series/">专栏</a>
+  <span class="wf-browse-sep">·</span>
+  <a class="wf-browse-item" href="/tags/">标签</a>
+  <span class="wf-browse-sep">·</span>
+  <a class="wf-browse-item" href="/categories/">分类</a>
+</div>
+
+<div class="waterfall">
+
+  <% if (topPosts.length) { %>
+    <% for (var i = 0; i < topPosts.length; i++) { var tp = topPosts[i]; %>
+      <div class="wf-card wf-card--pin">
+        <div class="wf-head">
+          <span class="wf-badge">📌 置顶</span>
+        </div>
+        <a class="wf-title" href="<%- url_for(tp.path) %>"><%= tp.title %></a>
+        <% if (tp.tags && tp.tags.length > 0) { %>
+          <div class="wf-tags">
+            <% tp.tags.forEach(function(tag) { %>
+              <span class="wf-tag">#<%= tag.name %></span>
+            <% }); %>
+          </div>
+        <% } %>
+      </div>
+    <% } %>
+  <% } %>
+
+  <% if (theme.tool.recentUpdatePost) { %>
+    <%
+    var recentSorted = postArray.filter(function(p) { return !('hide' in p && p.hide); });
+    recentSorted.sort(function(a, b) { return b.updated - a.updated; });
+    recentSorted = recentSorted.slice(0, 3);
+    %>
+    <div class="wf-section">最近更新</div>
+    <% for (var i = 0; i < recentSorted.length; i++) { var rp = recentSorted[i]; %>
+      <div class="wf-card">
+        <div class="wf-head">
+          <span class="wf-date"><%= date(rp.updated, "YYYY/MM/DD") %></span>
+        </div>
+        <a class="wf-title" href="<%- url_for(rp.path) %>"><%= rp.title %></a>
+      </div>
+    <% } %>
+  <% } %>
+
+  <% for (var yi = 0; yi < yearOrder.length; yi++) {
+    var year = yearOrder[yi];
+    var posts = yearMap[year];
+  %>
+    <div class="wf-section">
+      <%= year %> <span class="wf-count">[<%= posts.length %>]</span>
+      <% if (yi === 0) { %> 🍃<% } %>
+    </div>
+    <% for (var j = 0; j < posts.length; j++) { var p = posts[j]; %>
+      <div class="wf-card">
+        <div class="wf-head">
+          <% if (p.categories && p.categories.length > 0) { %>
+            <a class="wf-cat" href="/<%= p.categories.data[0].path %>"><%= p.categories.data[0].name %></a>
+          <% } %>
+          <% if (p.series && p.series_slug) { %>
+            <a class="wf-cat wf-cat--series" href="/series/<%= p.series_slug %>/"><%= p.series %></a>
+          <% } %>
+          <span class="wf-date"><%= date(p.date, "MM/DD") %></span>
+        </div>
+        <a class="wf-title" href="<%- url_for(p.path) %>"><%= p.title %></a>
+        <% if (p.tags && p.tags.length > 0) { %>
+          <div class="wf-tags">
+            <% p.tags.forEach(function(tag) { %>
+              <span class="wf-tag">#<%= tag.name %></span>
+            <% }); %>
+          </div>
+        <% } %>
+      </div>
+    <% } %>
+  <% } %>
+
+</div>
+
+

@@ -1,0 +1,19 @@
+{id:'regex',name:'正则测试',icon:'🔍',cat:'dev',desc:'实时匹配 · 捕获组高亮',
+html(){return'<div class="t-row"><input class="t-in" id="regPat" placeholder="正则表达式" value="(\\w+)@(\\w+\\.\\w+)" style="flex:1"><input class="t-in" id="regFlag" value="gi" style="width:60px"></div><div class="t-lbl">测试文本</div><textarea class="t-ta" id="regText" rows="4">联系 alice@test.com 或 bob@example.org 获取信息</textarea><div class="t-lbl" style="margin-top:6px">匹配结果</div><div id="regOut" style="padding:12px;background:#f8f9fa;border-radius:8px;line-height:2;min-height:40px"></div><div id="regInfo" style="font-size:.78em;color:#888;margin-top:4px"></div>'},
+init(el){
+  function run(){try{
+    const re=new RegExp(el.querySelector('#regPat').value,el.querySelector('#regFlag').value);
+    const text=el.querySelector('#regText').value;
+    let html='',last=0,count=0,groups=[];
+    if(re.global){let m;while((m=re.exec(text))!==null){
+      if(m.index>last)html+=text.slice(last,m.index).replace(/</g,'&lt;');
+      html+='<mark style="background:#ffd700;padding:1px 2px;border-radius:2px">'+m[0].replace(/</g,'&lt;')+'</mark>';
+      if(m.length>1)groups.push('匹配'+(count+1)+': ['+m.slice(1).map(function(g){return g==null?'undefined':String(g).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}).join(', ')+']');
+      last=m.index+m[0].length;count++;if(m[0].length===0)re.lastIndex++;if(count>200)break;
+    }}else{const m=re.exec(text);if(m){html=text.slice(0,m.index).replace(/</g,'&lt;')+'<mark style="background:#ffd700;padding:1px 2px;border-radius:2px">'+m[0].replace(/</g,'&lt;')+'</mark>'+text.slice(m.index+m[0].length).replace(/</g,'&lt;');count=1;if(m.length>1)groups.push('捕获: ['+m.slice(1).map(function(g){return g==null?'undefined':String(g).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}).join(', ')+']')}else html=text.replace(/</g,'&lt;')}
+    if(last<text.length&&re.global)html+=text.slice(last).replace(/</g,'&lt;');
+    el.querySelector('#regOut').innerHTML=html||'<span style="color:#999">无匹配</span>';
+    el.querySelector('#regInfo').innerHTML=count+' 个匹配'+(groups.length?'<br>'+groups.join('<br>'):'');
+  }catch(e){el.querySelector('#regOut').innerHTML='<span style="color:#f56c6c">'+e.message+'</span>'}}
+  ['regPat','regFlag','regText'].forEach(id=>el.querySelector('#'+id).oninput=run);run();
+}}

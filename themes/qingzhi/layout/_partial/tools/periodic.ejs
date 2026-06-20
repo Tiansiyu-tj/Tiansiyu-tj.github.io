@@ -1,0 +1,30 @@
+{id:'periodic',name:'元素周期表',icon:'⚛️',cat:'academic',desc:'交互式 · 详尽元素信息',
+html(){
+  let h='<div style="overflow-x:auto"><div class="pt-grid">';
+  PT_GRID.forEach(row=>{
+    row.forEach(z=>{
+      if(z===0)h+='<div class="pt-empty"></div>';
+      else if(z<0)h+='<div class="pt-marker">'+(z===-1?'La-Lu':z===-2?'Ac-Lr':z===-3?'镧系▶':'锕系▶')+'</div>';
+      else{const bg=ptCatColor(z);h+='<div class="pt-cell" data-z="'+z+'" style="background:'+bg+'22;border-color:'+bg+'"><span class="n">'+z+'</span><span class="s">'+PT_SYM[z-1]+'</span></div>'}
+    });
+  });
+  return h+'</div></div><div id="ptInfo" class="t-res" style="margin-top:8px;min-height:80px;line-height:1.8">👆 点击任意元素查看详细信息</div>';
+},
+init(el){
+  el.querySelectorAll('.pt-cell[data-z]').forEach(c=>{
+    c.onclick=()=>{
+      const z=+c.dataset.z,i=z-1;
+      const mp=PT_MP[i],bp=PT_BP[i],en=PT_EN[i],dens=PT_DENS[i];
+      let info='<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><span style="font-size:2.2em;font-weight:700;color:'+ptCatColor(z)+'">'+PT_SYM[i]+'</span><div><b style="font-size:1.1em">'+PT_CN[i]+'</b> ('+PT_SYM[i]+')<br><span style="color:#888;font-size:.82em">原子序数 '+z+' · '+ptCatName(z)+'</span></div></div>';
+      info+='<table style="width:100%;font-size:.82em;border-collapse:collapse">';
+      info+='<tr><td style="padding:4px 8px;color:#888">相对原子质量</td><td><b>'+PT_MASS[i]+'</b></td>';
+      info+='<td style="padding:4px 8px;color:#888">电子构型</td><td><b>'+PT_ECONF[i]+'</b></td></tr>';
+      info+='<tr><td style="padding:4px 8px;color:#888">熔点</td><td>'+(mp===-9999?'未知':mp+' °C')+'</td>';
+      info+='<td style="padding:4px 8px;color:#888">沸点</td><td>'+(bp===-9999?'未知':bp+' °C')+'</td></tr>';
+      info+='<tr><td style="padding:4px 8px;color:#888">密度</td><td>'+(dens?dens+' g/cm³':'未知')+'</td>';
+      info+='<td style="padding:4px 8px;color:#888">电负性</td><td>'+(en?en+' (Pauling)':'N/A')+'</td></tr>';
+      info+='</table>';
+      el.querySelector('#ptInfo').innerHTML=info;
+    };
+  });
+}}

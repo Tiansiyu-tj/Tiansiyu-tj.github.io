@@ -1,0 +1,252 @@
+# ═══════════════════════════════════════════════════════════════
+# 晴纸 (Qíngzhǐ) Theme v3.0.0 — 深度定制版
+# ───────────────────────────────────────────────────────────────
+# 基于 A4 v2.0.0 深度改造，现重命名为 晴纸 (Qíngzhǐ)：
+#   · jQuery 完全移除，6个 JS 文件原生重写
+#   · CSS 模块化拆分（8个独立模块，css/modules/ 下）
+#   · SEO 增强（Open Graph / Twitter Card / canonical / RSS）
+#   · 马克笔链接动效、纸面折痕、手绘删除线等视觉巧思
+#
+# ⚠️ CDN 必须保持 enable: false（CDN 上仍是 jQuery 版 JS）
+# ═══════════════════════════════════════════════════════════════
+
+
+# ┌─────────────────────────────────────────────────────────────┐
+# │ 1. 导航菜单                                                │
+# └─────────────────────────────────────────────────────────────┘
+# 定义全站页面导航。key 为显示名称，value 为路径。
+# 对应路径需先执行 hexo new page <name> 创建页面。
+# menu 中 value 为 "/" 的项视为"首页"，在首页导航中显示为纯文本。
+menu:
+  🏃首页: /
+  🌕文章: /list/
+  📅碎片: /fragments/
+  📰关于: /about/
+  🧰工具箱: /tools/
+  🤝友链: /friends/
+
+# 首页导航栏中显示为链接的项（🏃首页始终显示为文本，无需列入）。
+# ⚠️ 名称必须与 menu 的 key 完全一致（含 emoji）。
+showInMenu:
+  - 🌕文章
+  - 📅碎片
+  - 🧰工具箱
+
+
+# ┌─────────────────────────────────────────────────────────────┐
+# │ 2. 首页                                                    │
+# └─────────────────────────────────────────────────────────────┘
+index:
+  # 每日一句（古诗词/名言）配置
+  dailySentence:
+    enable: true                # 总开关 | false: 使用 header 语句池
+    api: "jinrishici"           # 选择 API: jinrishici（默认）| hitokoto | custom
+    timeout: 3000               # 超时时间（毫秒）
+    custom_url: ""              # 自定义 API 地址（当 api="custom" 时使用）
+    jinrishici_token: ""        # 今日诗词 Token（v1 API 已弃用，保留字段兼容）
+    fallbacks:                  # 兜底文本（API 失败时随机显示）
+      - "读书不觉已春深，一寸光阴一寸金。"
+      - "纸上得来终觉浅，绝知此事要躬行。"
+      - "博观而约取，厚积而薄发。"
+    # API 说明（经实际测试可用）：
+    # · jinrishici - 今日诗词 v1（默认）- 纯古诗词 5万+，每次随机，响应 ~380ms
+    # · hitokoto   - 一言 - 诗词+名言混合，多分类可选，响应 ~330ms，社区维护稳定
+    # · custom     - 自定义 - 填写 custom_url，响应需符合标准 JSON 格式（content/hitokoto/data.content）
+  
+  header:                       # dailySentence.enable=false 时的备用语句池
+    - "我忘明月很久，明月始终望我"
+  titlePosition: center         # center | left — 站名标题对齐方式
+  width: small                  # small | middle | big — 首页纸面宽度
+  list: false                   # true: 首页底部展示文章列表
+
+# 首页统计信息
+indexInfo:
+  allWordCount: true            # 全站字数统计（依赖 hexo-wordcount 插件）
+  allViewCount: true            # 全站访问量（依赖评论系统的统计接口）
+
+
+# ┌─────────────────────────────────────────────────────────────┐
+# │ 3. 文章页                                                  │
+# └─────────────────────────────────────────────────────────────┘
+post:
+  footer: 好好学习，天天向上✍️    # 文章底部左侧自定义文案
+  themeInfo: true               # bottomright 显示 "Powered by 晴纸" 声明
+  width: middle                 # middle(880px) | big — 文章纸面宽度
+  titlePosition: left         # left | center — 文章标题对齐方式
+
+# 文章元信息显示控制
+postInfo:
+  updateDate: true              # 显示"最近更新"时间
+  wordCount: true               # 显示文章字数
+  readTime: true                # 显示预计阅读耗时
+  viewCount: true               # 显示阅读量（依赖评论系统）
+  prevAndNextLink:              # 上/下篇文章导航
+    status: true                # 总开关
+    prevInfo: 上一篇             # 自定义文案（可改为英文 "Prev"）
+    nextInfo: 下一篇             # 自定义文案（可改为英文 "Next"）
+  endContent: 以上              # 评论区上方的结束语（仅评论开启时可见）
+
+
+# ┌─────────────────────────────────────────────────────────────┐
+# │ 4. 页脚链接                                                │
+# └─────────────────────────────────────────────────────────────┘
+# 全局页脚信息栏，支持 HTML 标签。
+footerLink:
+  info: ""  # 支持 HTML，例如：© 2025, Your Name | <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener">ICP 备案号</a>
+
+
+# ┌─────────────────────────────────────────────────────────────┐
+# │ 5. 外观                                                    │
+# └─────────────────────────────────────────────────────────────┘
+
+# — 头像 —
+# 路径相对于 source/ 目录
+favicon: /img/favicon.webp
+isRoundedAvatar: false          # true: 圆形头像
+isAvatarRotating: false         # true: 圆形头像悬浮旋转（仅 isRoundedAvatar: true 时有效）
+
+# — 色调 —
+# enable: false 为 A4 默认灰白色调
+# 颜色代码需加 "#"，颜色单词不加
+color:
+  enable: true
+  # ── 基础色「霁蓝」(After-rain Blue) ── 
+  font: "#2D2D32"               # 正文字体色（近黑色）
+  background: "#F5F7F9"         # 外围底色（冷瓷色）
+  indexBackGround: "#FCFCFD"    # 首页底色（极淡白）
+  postBackGround: "#FCFCFD"     # 文章页底色（极淡白）
+  codeBackGround: "#EDF0F4"     # 代码块底色（蓝灰面 surface）
+  linkBeforeClick: "#5B8BA4"    # 链接/强调色（霁蓝，WCAG AA ≥4.5:1）
+  # ── 扩展色 ──
+  fontColor2: "#697880"         # 次要文字色（蓝灰）
+  fontColor3: "#6E7F8A"         # 辅助文字色（深蓝灰，WCAG AA ≥4.5:1）
+  bgZebra: "#F1F4F7"            # 斑马纹底色（表格偶数行）
+  borderWarm: "#DCE1E7"         # 冷色边框（表格、分隔线）
+  seriesColor: "#6B9E5F"        # 系列标签色（清新绿，WCAG AA ≥4.5:1）
+
+# — 背景图 —
+# 叠在最底层，纸面在其上方
+imageShow:
+  enable: false
+  background: /img/favicon.webp # 相对于 source/ 的图片路径
+
+# — 字体 —
+# MiSans (HyperOS 系统字体) 通过 jsDelivr CDN 加载，子集化按需加载。
+# 配置见 css/fonts.css，不需额外设置。
+font:
+  enable: true
+
+
+# ┌─────────────────────────────────────────────────────────────┐
+# │ 6. 功能开关                                                │
+# └─────────────────────────────────────────────────────────────┘
+tool:
+  returnToTop: true             # 右下角"回到顶部"浮动按钮（含 SVG 进度环）
+  returnToLast: true            # 右下角"返回上一页"浮动按钮
+  topToc: true                  # 文章顶部折叠目录
+  leftToc: true                 # 左侧浮动目录（仅宽屏 ≥1360px 显示）
+  recentUpdatePost: true        # 列表页"最近更新"模块，自动创建 /recent-updates 页面
+
+
+# ┌─────────────────────────────────────────────────────────────┐
+# │ 7. CDN                                                     │
+# └─────────────────────────────────────────────────────────────┘
+# ⚠️ 必须保持 enable: false！
+# CDN 上托管的是原版 jQuery 依赖的 JS 文件，
+# 而本主题已将所有 JS 改为原生实现，开启 CDN 会导致脚本冲突。
+cdn:
+  enable: false
+  choose: aliyun                # zzko | aliyun | unpkg | jsdelivr（仅 enable: true 时有意义）
+
+
+# ┌─────────────────────────────────────────────────────────────┐
+# │ 8. LightGallery 图片灯箱                                   │
+# └─────────────────────────────────────────────────────────────┘
+# 仅在文章/页面中加载（非首页/列表页），点击图片弹出全屏浏览。
+lightgallery:
+  thumbnail: true               # 缩略图面板
+  zoom: true                    # 缩放
+  rotate: true                  # 旋转
+  autoplay: true                # 自动播放
+  fullScreen: true              # 全屏按钮
+  pager: false                  # 页码指示器
+
+
+# ┌─────────────────────────────────────────────────────────────┐
+# │ 9. 评论系统                                               │
+# └─────────────────────────────────────────────────────────────┘
+# 可在文章 front-matter 中设置 comment: false 关闭单篇评论。
+comment:
+  enable: true
+  use: giscus                   # waline | twikoo | giscus | artalk
+  lazyLoad: true                # 懒加载：评论区进入视口才加载脚本（节省首屏流量）
+
+  # Waline（需自行部署 Vercel 后端）
+  # 文档: https://waline.js.org/guide/get-started.html
+  waline:
+    serverUrl: ""               # 填写 Waline 后端地址，见 https://waline.js.org/guide/get-started.html
+    lang: zh-CN
+    placeholder: 留下你的评论吧。
+
+  # Twikoo（腾讯云/自建后端）
+  # 文档: https://twikoo.js.org/quick-start.html
+  twikoo:
+    envId:                      # 腾讯云环境 ID 或自建地址
+    region:                     # 腾讯云地域（自建不填）
+    lang:
+
+  # Giscus（基于 GitHub Discussions，无需自建后端）
+  # 配置生成: https://giscus.app
+  giscus:
+    dataRepo: "Tiansiyu-tj/Tiansiyu-tj.github.io"               # 格式: username/repo-name
+    dataRepoId: "R_kgDOTATlxg"               # 从 https://giscus.app 生成
+    dataCategory: Announcements
+    dataCategoryId: "DIC_kwDOTATlxs4C_i96"           # 从 https://giscus.app 生成
+    dataMapping: pathname       # pathname | url | title | og:title | number | specific
+    dataTerm:                   # mapping=number/specific 时必填
+    dataStrict: "0"
+    dataReactionsEnabled: "1"   # 启用 Reactions 表情
+    dataEmitMetadata: "0"
+    dataInputPosition: top      # top | bottom — 评论输入框位置
+    dataTheme: noborder_light   # Giscus 主题
+    dataLang: zh-CN
+    dataLoading:                # lazy — 懒加载（可选）
+    crossorigin: anonymous
+    async: true
+
+  # Artalk（自建评论系统）
+  # 文档: https://artalk.js.org/guide/deploy.html
+  artalk:
+    server:                     # Artalk 后端地址
+
+
+# ┌─────────────────────────────────────────────────────────────┐
+# │ 10. APlayer 全局音乐播放器                                 │
+# └─────────────────────────────────────────────────────────────┘
+# 悬浮在首页右下角的音乐播放器，基于 MetingJS 自动获取歌单。
+# ⚠️ 仅在首页 (is_home) 加载，文章页不显示。
+# ⚠️ API 配置同时影响工具箱中的音频播放器工具（共享 API 地址）。
+# 文档: https://github.com/metowolf/MetingJS
+aplayer:
+  enable: true                  # 播放器总开关（false 则首页完全不加载 APlayer）
+  server: netease               # 音乐平台: netease | tencent | kugou | xiami | baidu
+  type: playlist                # 资源类型: playlist | album | song | search | artist
+  id: '472143089'               # 歌单/专辑/歌曲 ID（URL 中的数字）
+  theme: '#5B8BA4'              # 播放器主题色（霁蓝，与 accent 一致）
+
+  # 自定义 Meting API（留空使用默认 API）
+  # 模板变量: :server, :type, :id, :r
+  customApi: 'https://meting.qjqq.cn/?server=:server&type=:type&id=:id'
+  # 备选 API 列表（主 API 失败时按顺序依次尝试，实现多源容灾）
+  customApiFallbacks:
+    - 'https://api.injahow.cn/meting/?server=:server&type=:type&id=:id&r=:r'
+    - 'https://api.i-meto.com/meting/api?server=:server&type=:type&id=:id'
+
+
+# ┌─────────────────────────────────────────────────────────────┐
+# │ 11. 高级 / 内部                                            │
+# └─────────────────────────────────────────────────────────────┘
+inject:
+  css:                          # CSS 已改为模块化加载（head.ejs 中直接引入 css/modules/*.css）
+
+version: v3.0.0                 # 主题版本号

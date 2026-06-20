@@ -1,0 +1,505 @@
+{id:'fourier',name:'傅里叶合成器',icon:'〰️',cat:'music',desc:'傅里叶级数 · 乐器音色 · 手绘波形 · 音频播放',
+html:function(){
+  return '<div class="t-row" style="flex-wrap:wrap">'+
+    '<label class="t-lbl">波形/音色</label>'+
+    '<select class="t-sel" id="fouWave">'+
+      '<option value="square">方波</option>'+
+      '<option value="sawtooth">锯齿波</option>'+
+      '<option value="triangle">三角波</option>'+
+      '<option disabled>──── 乐器音色 ────</option>'+
+      '<option value="piano">🎹 钢琴</option>'+
+      '<option value="erhu">🎻 二胡</option>'+
+      '<option value="clarinet">🎷 单簧管</option>'+
+      '<option value="trumpet">🎺 小号</option>'+
+      '<option value="flute">🪈 笛子</option>'+
+      '<option value="organ">🎙️ 风琴</option>'+
+      '<option disabled>────────────</option>'+
+      '<option value="custom">自由调节</option>'+
+      '<option value="draw">✏️ 手绘波形</option>'+
+    '</select>'+
+    '<label class="t-lbl" style="margin-left:12px">谐波数 N</label>'+
+    '<input class="t-in" id="fouN" type="number" min="1" max="32" value="8" style="width:60px">'+
+    '<label class="t-lbl" style="margin-left:12px">基频 f₀</label>'+
+    '<input class="t-in" id="fouFreq" type="number" min="20" max="2000" value="220" style="width:70px">'+
+    '<span class="t-lbl">Hz</span>'+
+  '</div>'+
+  '<canvas id="fouCv" class="t-cv" style="max-width:760px;height:360px;margin:8px auto;display:block"></canvas>'+
+  '<div id="fouDrawHint" style="text-align:center;font-size:12px;color:#99AAB5;display:none">🎨 在画布左半部分拖动绘制一个周期的波形，松开后自动计算傅里叶系数</div>'+
+  '<div id="fouSliders" style="max-width:760px;margin:0 auto;max-height:220px;overflow-y:auto;padding:4px 0"></div>'+
+  '<div class="t-row" style="justify-content:center;margin-top:6px;flex-wrap:wrap">'+
+    '<button class="t-btn" id="fouPlay">▶ 播放</button>'+
+    '<button class="t-btn t-btn-o" id="fouStop" style="display:none">■ 停止</button>'+
+    '<button class="t-btn t-btn-o" id="fouAnim">🎬 逐项叠加</button>'+
+    '<button class="t-btn t-btn-o" id="fouReset">重置系数</button>'+
+  '</div>'+
+  '<div id="fouFormula" class="t-res" style="text-align:center;margin-top:6px"></div>';
+},
+init:function(el){
+  var cv=el.querySelector('#fouCv');
+  var ctx=cv.getContext('2d');
+  var dpr=window.devicePixelRatio||1;
+  var CW=Math.min(760,cv.parentElement.clientWidth-4),CH=Math.round(CW*0.47);
+  cv.width=CW*dpr;cv.height=CH*dpr;
+  cv.style.width=CW+'px';cv.style.height=CH+'px';
+  ctx.scale(dpr,dpr);
+
+  var cs=getComputedStyle(document.documentElement);
+  var accent=cs.getPropertyValue('--accent').trim()||'#5B8BA4';
+  var bgPaper=cs.getPropertyValue('--bg-paper').trim()||'#FCFCFD';
+  var fontColor1=cs.getPropertyValue('--font-color-1').trim()||'#2D2D32';
+  var fontColor3=cs.getPropertyValue('--font-color-3').trim()||'#99AAB5';
+  var borderWarm=cs.getPropertyValue('--border-warm').trim()||'#DCE1E7';
+
+  var selWave=el.querySelector('#fouWave');
+  var inpN=el.querySelector('#fouN');
+  var inpFreq=el.querySelector('#fouFreq');
+  var divSliders=el.querySelector('#fouSliders');
+  var btnPlay=el.querySelector('#fouPlay');
+  var btnStop=el.querySelector('#fouStop');
+  var btnAnim=el.querySelector('#fouAnim');
+  var btnReset=el.querySelector('#fouReset');
+  var divFormula=el.querySelector('#fouFormula');
+  var divDrawHint=el.querySelector('#fouDrawHint');
+
+  var MAX_N=32;
+  var amplitudes=[];
+  var phases=[];
+  var N=8;
+  var audioCtx=null;
+  var audioNode=null;
+  var playing=false;
+  var animating=false;
+  var animTimerId=null;
+
+  var DRAW_M=200;
+  var drawnWave=null;
+  var isDrawing=false;
+  var lastDrawIdx=-1;
+
+  var padL=50,padR=20,padT=30,padB=30;
+  var plotW=CW-padL-padR,plotH=CH-padT-padB;
+  var midY=padT+plotH/2;
+  var yScale=plotH/2*0.85;
+  var periods=2;
+
+  /* ===== 乐器谐波频谱表 ===== */
+  var TIMBRES={
+    piano:   [0,1.0,.70,.40,.25,.18,.12,.08,.06,.04,.03],
+    erhu:    [0,1.0,.85,.65,.45,.30,.20,.12,.08,.05,.03],
+    clarinet:[0,1.0,.06,.85,.04,.55,.03,.35,.02,.18,.01],
+    trumpet: [0,1.0,.90,.85,.70,.55,.40,.30,.20,.12,.08],
+    flute:   [0,1.0,.12,.04,.02,.01],
+    organ:   [0,1.0,.80,.60,.50,.40,.35,.28,.20,.15,.10]
+  };
+
+  function isTimbre(t){return !!TIMBRES[t]}
+
+  /* ===== 理论系数 ===== */
+  function theoreticalCoeffs(type,n){
+    if(type==='square'){
+      if(n%2===0)return{a:0,p:0};
+      return{a:4/(Math.PI*n),p:0};
+    }
+    if(type==='sawtooth'){
+      return{a:2/(Math.PI*n)*((n%2===0)?-1:1),p:0};
+    }
+    if(type==='triangle'){
+      if(n%2===0)return{a:0,p:0};
+      var sign=((n-1)/2%2===0)?1:-1;
+      return{a:sign*8/(Math.PI*Math.PI*n*n),p:0};
+    }
+    if(TIMBRES[type]){
+      var arr=TIMBRES[type];
+      return{a:n<arr.length?arr[n]:0,p:0};
+    }
+    return{a:0,p:0};
+  }
+
+  function setCoeffsFromWave(){
+    var type=selWave.value;
+    for(var n=1;n<=MAX_N;n++){
+      var c=theoreticalCoeffs(type,n);
+      amplitudes[n]=c.a;phases[n]=c.p;
+    }
+  }
+
+  function computeDFT(){
+    if(!drawnWave)return;
+    for(var n=1;n<=MAX_N;n++){
+      var sum=0;
+      for(var k=0;k<DRAW_M;k++){
+        sum+=(drawnWave[k]||0)*Math.sin(2*Math.PI*n*k/DRAW_M);
+      }
+      amplitudes[n]=Math.max(-1,Math.min(1,2*sum/DRAW_M));
+    }
+  }
+
+  /* ===== 目标波形 ===== */
+  function targetWave(t){
+    var type=selWave.value;
+    var ph=t-Math.floor(t);
+    if(type==='square') return ph<0.5?1:-1;
+    if(type==='sawtooth'){
+      if(ph<0.5)return 2*ph;return 2*ph-2;
+    }
+    if(type==='triangle'){
+      if(ph<0.25)return 4*ph;
+      if(ph<0.75)return 2-4*ph;
+      return 4*ph-4;
+    }
+    if(type==='draw'&&drawnWave){
+      var idx=Math.floor(ph*DRAW_M);
+      if(idx>=DRAW_M)idx=DRAW_M-1;
+      return drawnWave[idx]||0;
+    }
+    if(TIMBRES[type]){
+      var sum2=0;
+      for(var nn=1;nn<=MAX_N;nn++){
+        var cc=theoreticalCoeffs(type,nn);
+        if(Math.abs(cc.a)>1e-10)sum2+=cc.a*Math.sin(2*Math.PI*nn*t);
+      }
+      return sum2;
+    }
+    return 0;
+  }
+
+  /* ===== 合成 ===== */
+  function evaluate(t){
+    var sum=0;
+    for(var n=1;n<=N;n++){
+      var a=amplitudes[n]||0;
+      if(Math.abs(a)<1e-10)continue;
+      sum+=a*Math.sin(2*Math.PI*n*t+(phases[n]||0));
+    }
+    return sum;
+  }
+
+  function computeRMS(){
+    var type=selWave.value;
+    if(type==='custom')return -1;
+    var M=400,sumSq=0;
+    for(var k=0;k<M;k++){
+      var t=k/M;
+      var d=evaluate(t)-targetWave(t);
+      sumSq+=d*d;
+    }
+    return Math.sqrt(sumSq/M);
+  }
+
+  /* ===== 滑块面板 ===== */
+  function buildSliders(){
+    N=parseInt(inpN.value)||8;
+    if(N<1)N=1;if(N>MAX_N)N=MAX_N;
+    divSliders.innerHTML='';
+    for(var n=1;n<=N;n++){
+      (function(n){
+        var hue=((n-1)*37)%360;
+        var row=document.createElement('div');
+        row.style.cssText='display:flex;align-items:center;gap:6px;margin:2px 0;font-size:13px';
+        var dot=document.createElement('span');
+        dot.style.cssText='width:10px;height:10px;border-radius:50%;flex-shrink:0;background:hsl('+hue+',55%,55%)';
+        var lbl=document.createElement('span');
+        lbl.style.cssText='width:28px;text-align:right;color:'+fontColor1;
+        lbl.textContent='n='+n;
+        var sl=document.createElement('input');
+        sl.type='range';sl.min='-1';sl.max='1';sl.step='0.01';
+        sl.value=amplitudes[n]||0;
+        sl.style.cssText='flex:1;max-width:280px';
+        var val=document.createElement('span');
+        val.style.cssText='width:48px;font-size:12px;color:'+fontColor3;
+        val.textContent=(amplitudes[n]||0).toFixed(2);
+        sl.oninput=function(){
+          amplitudes[n]=parseFloat(sl.value);
+          val.textContent=amplitudes[n].toFixed(2);
+          drawWave();updateFormula();
+        };
+        row.appendChild(dot);
+        row.appendChild(lbl);
+        row.appendChild(sl);
+        row.appendChild(val);
+        divSliders.appendChild(row);
+      })(n);
+    }
+  }
+
+  /* ===== 绘制 ===== */
+  function drawWave(){
+    ctx.clearRect(0,0,CW,CH);
+    ctx.fillStyle=bgPaper;
+    ctx.fillRect(0,0,CW,CH);
+
+    ctx.strokeStyle=borderWarm;ctx.lineWidth=1;
+    ctx.beginPath();
+    ctx.moveTo(padL,padT);ctx.lineTo(padL,padT+plotH);ctx.lineTo(padL+plotW,padT+plotH);
+    ctx.stroke();
+
+    ctx.strokeStyle=fontColor3;ctx.setLineDash([4,4]);
+    ctx.beginPath();ctx.moveTo(padL,midY);ctx.lineTo(padL+plotW,midY);ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.font='11px sans-serif';ctx.fillStyle=fontColor3;
+    ctx.textAlign='right';ctx.textBaseline='middle';
+    ctx.fillText('+1',padL-6,padT+plotH*0.075);
+    ctx.fillText('0',padL-6,midY);
+    ctx.fillText('-1',padL-6,padT+plotH*0.925);
+    ctx.textAlign='center';ctx.textBaseline='top';
+    ctx.fillText('0',padL,padT+plotH+4);
+    ctx.fillText('T',padL+plotW/2,padT+plotH+4);
+    ctx.fillText('2T',padL+plotW,padT+plotH+4);
+
+    if(selWave.value==='draw'){
+      ctx.strokeStyle='rgba(91,139,164,0.2)';ctx.setLineDash([3,5]);ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(padL+plotW/2,padT);ctx.lineTo(padL+plotW/2,padT+plotH);ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.font='11px sans-serif';ctx.fillStyle='rgba(91,139,164,0.5)';ctx.textBaseline='top';
+      ctx.fillText('← 绘制区',padL+plotW/4,padT+4);
+    }
+
+    var samples=plotW;
+    var type=selWave.value;
+
+    if(type!=='custom'){
+      ctx.strokeStyle=fontColor3;ctx.setLineDash([3,3]);ctx.lineWidth=1.5;
+      ctx.beginPath();
+      for(var i=0;i<samples;i++){
+        var t=i/samples*periods;
+        var y=targetWave(t);
+        var px=padL+i;
+        var py=midY-y*yScale;
+        if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+      }
+      ctx.stroke();ctx.setLineDash([]);
+    }
+
+    for(var n=1;n<=N;n++){
+      var a=amplitudes[n]||0;
+      if(Math.abs(a)<0.005)continue;
+      ctx.strokeStyle='hsla('+((n-1)*37)%360+',55%,55%,0.25)';
+      ctx.lineWidth=1;
+      ctx.beginPath();
+      for(var i=0;i<samples;i++){
+        var t=i/samples*periods;
+        var y=a*Math.sin(2*Math.PI*n*t+(phases[n]||0));
+        var px=padL+i;
+        var py=midY-y*yScale;
+        if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+      }
+      ctx.stroke();
+    }
+
+    ctx.strokeStyle=accent;ctx.lineWidth=2.5;
+    ctx.beginPath();
+    for(var i=0;i<samples;i++){
+      var t=i/samples*periods;
+      var y=evaluate(t);
+      var px=padL+i;
+      var py=midY-y*yScale;
+      if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+    }
+    ctx.stroke();
+
+    ctx.font='12px sans-serif';ctx.textAlign='left';ctx.textBaseline='top';
+    var lx=padL+10,ly=padT+6;
+    ctx.fillStyle=accent;
+    ctx.fillRect(lx,ly+2,16,3);
+    ctx.fillText('合成 (N='+N+')',lx+20,ly-2);
+    if(type!=='custom'){
+      ly+=16;
+      ctx.fillStyle=fontColor3;
+      ctx.setLineDash([3,3]);
+      ctx.beginPath();ctx.moveTo(lx,ly+3);ctx.lineTo(lx+16,ly+3);ctx.stroke();
+      ctx.setLineDash([]);
+      var nm={square:'方波',sawtooth:'锯齿波',triangle:'三角波',draw:'手绘',
+              piano:'钢琴',erhu:'二胡',clarinet:'单簧管',trumpet:'小号',flute:'笛子',organ:'风琴'};
+      ctx.fillText('目标: '+(nm[type]||type),lx+20,ly-2);
+    }
+    var rms=computeRMS();
+    if(rms>=0){
+      ly+=16;
+      ctx.fillStyle='#e17055';
+      ctx.fillText('RMS 误差 = '+rms.toFixed(4),lx+20,ly-2);
+    }
+  }
+
+  /* ===== 公式 ===== */
+  function updateFormula(){
+    var terms=[];
+    for(var n=1;n<=N;n++){
+      var a=amplitudes[n]||0;
+      if(Math.abs(a)<0.005)continue;
+      var coeff=Math.abs(a).toFixed(3);
+      var sign=a<0?' − ':' + ';
+      if(terms.length===0&&a>0)sign='';
+      terms.push(sign+coeff+'sin('+n+'ωt)');
+      if(terms.length>=6){terms.push('…');break;}
+    }
+    divFormula.textContent='f(t) ≈ '+(terms.length?terms.join(''):'0');
+  }
+
+  /* ===== 逐项叠加动画 ===== */
+  function startAnimFou(){
+    if(animating)return;
+    animating=true;
+    btnAnim.textContent='⏳ 动画中...';
+    var maxN=parseInt(inpN.value)||8;
+    if(maxN>MAX_N)maxN=MAX_N;
+    var curN=0;
+    function tick(){
+      curN++;
+      if(curN>maxN){animating=false;btnAnim.textContent='🎬 逐项叠加';inpN.value=maxN;buildSliders();drawWave();updateFormula();return}
+      inpN.value=curN;buildSliders();drawWave();updateFormula();
+      animTimerId=setTimeout(tick,350);
+    }
+    tick();
+  }
+  function stopAnimFou(){
+    if(!animating)return;
+    animating=false;
+    if(animTimerId){clearTimeout(animTimerId);animTimerId=null}
+    btnAnim.textContent='🎬 逐项叠加';
+  }
+
+  /* ===== 手绘交互 ===== */
+  function canvasToWave(e){
+    var rect=cv.getBoundingClientRect();
+    var scX=CW/rect.width,scY=CH/rect.height;
+    var cx=e.clientX||(e.touches&&e.touches[0].clientX);
+    var cy=e.clientY||(e.touches&&e.touches[0].clientY);
+    var x=(cx-rect.left)*scX,y=(cy-rect.top)*scY;
+    var halfW=plotW/2;
+    var idx=Math.floor((x-padL)/halfW*DRAW_M);
+    var val=(midY-y)/yScale;
+    val=Math.max(-1,Math.min(1,val));
+    return{idx:idx,val:val};
+  }
+  function interpDraw(from,to,fv,tv){
+    if(from<0)from=0;if(to>=DRAW_M)to=DRAW_M-1;
+    if(from>to){var t2=from;from=to;to=t2;var v2=fv;fv=tv;tv=v2}
+    for(var i=from;i<=to;i++){
+      var t=(to===from)?0:(i-from)/(to-from);
+      drawnWave[i]=fv+(tv-fv)*t;
+    }
+  }
+  function initDrawn(){if(!drawnWave){drawnWave=[];for(var i=0;i<DRAW_M;i++)drawnWave[i]=0}}
+  function finishDraw(){isDrawing=false;lastDrawIdx=-1;computeDFT();buildSliders();drawWave();updateFormula();}
+
+  cv.addEventListener('mousedown',function(e){
+    if(selWave.value!=='draw')return;
+    var c=canvasToWave(e);if(c.idx<0||c.idx>=DRAW_M)return;
+    isDrawing=true;initDrawn();drawnWave[c.idx]=c.val;lastDrawIdx=c.idx;drawWave();
+  });
+  cv.addEventListener('mousemove',function(e){
+    if(!isDrawing||selWave.value!=='draw')return;
+    var c=canvasToWave(e);if(c.idx<0||c.idx>=DRAW_M)return;
+    if(lastDrawIdx>=0)interpDraw(lastDrawIdx,c.idx,drawnWave[lastDrawIdx]||0,c.val);
+    else drawnWave[c.idx]=c.val;
+    lastDrawIdx=c.idx;drawWave();
+  });
+  cv.addEventListener('mouseup',function(){if(isDrawing&&selWave.value==='draw')finishDraw()});
+  cv.addEventListener('mouseleave',function(){if(isDrawing&&selWave.value==='draw')finishDraw()});
+
+  cv.addEventListener('touchstart',function(e){
+    if(selWave.value!=='draw')return;e.preventDefault();
+    var c=canvasToWave(e);if(c.idx<0||c.idx>=DRAW_M)return;
+    isDrawing=true;initDrawn();drawnWave[c.idx]=c.val;lastDrawIdx=c.idx;drawWave();
+  },{passive:false});
+  cv.addEventListener('touchmove',function(e){
+    if(!isDrawing||selWave.value!=='draw')return;e.preventDefault();
+    var c=canvasToWave(e);if(c.idx<0||c.idx>=DRAW_M)return;
+    if(lastDrawIdx>=0)interpDraw(lastDrawIdx,c.idx,drawnWave[lastDrawIdx]||0,c.val);
+    else drawnWave[c.idx]=c.val;
+    lastDrawIdx=c.idx;drawWave();
+  },{passive:false});
+  cv.addEventListener('touchend',function(e){
+    if(selWave.value!=='draw')return;e.preventDefault();finishDraw();
+  },{passive:false});
+
+  /* ===== Web Audio（含包络与颤音） ===== */
+  function startAudio(){
+    if(playing)return;
+    try{audioCtx=new(window.AudioContext||window.webkitAudioContext)()}catch(e){return}
+    var f0=parseFloat(inpFreq.value)||220;
+    var bufSize=4096;
+    audioNode=audioCtx.createScriptProcessor(bufSize,0,1);
+    var sr=audioCtx.sampleRate;
+    var ph=0;
+    var noteAge=0;
+    var oscPh=[];
+    for(var nn=0;nn<=MAX_N;nn++)oscPh[nn]=0;
+    var curType=selWave.value;
+    audioNode.onaudioprocess=function(e){
+      var out=e.outputBuffer.getChannelData(0);
+      for(var s=0;s<bufSize;s++){
+        var t=ph/sr;
+        var noteT=noteAge/sr;
+
+        /* 包络 */
+        var env=1.0;
+        if(curType==='piano'){
+          env=Math.exp(-noteT*4);
+          if(env<0.003){noteAge=0;for(var nn=1;nn<=MAX_N;nn++)oscPh[nn]=0}
+        }else if(curType==='erhu'){
+          env=Math.min(1,noteT*4);
+        }
+
+        /* 频率（二胡加颤音 ±2.5%@5.5Hz） */
+        var freq=f0;
+        if(curType==='erhu') freq=f0*(1+0.025*Math.sin(2*Math.PI*5.5*t));
+
+        /* 合成 */
+        var v=0;
+        for(var n=1;n<=N;n++){
+          var a=amplitudes[n]||0;
+          if(Math.abs(a)<1e-10)continue;
+          oscPh[n]+=2*Math.PI*n*freq/sr;
+          v+=a*Math.sin(oscPh[n]);
+        }
+        out[s]=v*0.3*env;
+        ph++;noteAge++;
+      }
+    };
+    audioNode.connect(audioCtx.destination);
+    playing=true;btnPlay.style.display='none';btnStop.style.display='';
+  }
+  function stopAudio(){
+    if(!playing)return;
+    if(audioNode){audioNode.disconnect();audioNode=null}
+    if(audioCtx){audioCtx.close();audioCtx=null}
+    playing=false;btnPlay.style.display='';btnStop.style.display='none';
+  }
+
+  /* ===== 事件 ===== */
+  selWave.onchange=function(){
+    stopAnimFou();
+    var mode=selWave.value;
+    divDrawHint.style.display=mode==='draw'?'':'none';
+    if(mode==='draw'){drawnWave=null}
+    else if(mode!=='custom')setCoeffsFromWave();
+    buildSliders();drawWave();updateFormula();
+  };
+  inpN.onchange=function(){
+    stopAnimFou();
+    N=parseInt(inpN.value)||8;if(N<1)N=1;if(N>MAX_N)N=MAX_N;
+    var m=selWave.value;
+    if(m!=='custom'&&m!=='draw')setCoeffsFromWave();
+    if(m==='draw'&&drawnWave)computeDFT();
+    buildSliders();drawWave();updateFormula();
+  };
+  btnPlay.onclick=startAudio;
+  btnStop.onclick=stopAudio;
+  btnAnim.onclick=function(){if(animating)stopAnimFou();else startAnimFou()};
+  btnReset.onclick=function(){
+    stopAnimFou();
+    if(selWave.value==='draw'){drawnWave=null}
+    else if(selWave.value!=='custom')setCoeffsFromWave();
+    else{for(var n=1;n<=MAX_N;n++){amplitudes[n]=0;phases[n]=0}}
+    buildSliders();drawWave();updateFormula();
+  };
+
+  /* ===== 初始化 ===== */
+  for(var n=0;n<=MAX_N;n++){amplitudes[n]=0;phases[n]=0}
+  setCoeffsFromWave();
+  buildSliders();drawWave();updateFormula();
+
+  el._cleanup=function(){stopAudio();stopAnimFou()};
+}}

@@ -1,0 +1,38 @@
+<div class="series-detail-page">
+  <!-- 左对齐返回 -->
+  <a class="browse-back" href="/series/">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+    所有专栏
+  </a>
+
+  <!-- 专栏头部：居中彩色书本 SVG -->
+  <div class="series-detail-hero">
+    <div class="series-detail-icon" style="color: <%= page.seriesColor %>;">
+      <svg viewBox="0 0 24 24" width="48" height="48" fill="none">
+        <rect x="4" y="2" width="16" height="20" rx="2" fill="currentColor" fill-opacity="0.12" stroke="currentColor" stroke-width="1.5"/>
+        <line x1="8" y1="2" x2="8" y2="22" stroke="currentColor" stroke-width="1.5"/>
+        <line x1="11" y1="8" x2="17" y2="8" stroke="currentColor" stroke-width="1" opacity="0.45" stroke-linecap="round"/>
+        <line x1="11" y1="12" x2="15" y2="12" stroke="currentColor" stroke-width="1" opacity="0.45" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <h1 class="series-detail-name"><%= page.seriesName %></h1>
+    <p class="series-detail-info">
+      共 <strong><%= page.seriesPosts.length %></strong> 篇
+      · 按时间排序
+    </p>
+  </div>
+
+  <!-- 文章列表 -->
+  <div class="series-detail-list">
+    <% page.seriesPosts.forEach(function(post, idx) { %>
+      <a class="series-item" href="<%- url_for(post.path) %>">
+        <span class="series-item-num"><%= String(idx + 1).padStart(2, '0') %></span>
+        <span class="series-item-body">
+          <span class="series-item-title"><%= post.title %></span>
+          <span class="series-item-date"><%= date(post.date, 'YYYY-MM-DD') %></span>
+        </span>
+        <svg class="series-item-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </a>
+    <% }); %>
+  </div>
+</div>

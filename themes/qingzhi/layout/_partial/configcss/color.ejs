@@ -1,0 +1,59 @@
+<% if(theme.color.enable) { %>
+    <style>
+        :root {
+            /* ── Config 覆盖全局 Token ── */
+            --accent: <%=theme.color.linkBeforeClick %>;
+            --font-color-0: <%=theme.color.linkBeforeClick %>;
+            --font-color-1: <%=theme.color.font %>;
+            --bg-outer: <%=theme.color.background %>;
+            --bg-paper: <%=theme.color.postBackGround %>;
+            --surface: <%=theme.color.codeBackGround %>;
+            <% if(theme.color.fontColor2) { %>--font-color-2: <%=theme.color.fontColor2 %>;<% } %>
+            <% if(theme.color.fontColor3) { %>--font-color-3: <%=theme.color.fontColor3 %>;<% } %>
+            <% if(theme.color.bgZebra) { %>--bg-zebra: <%=theme.color.bgZebra %>;<% } %>
+            <% if(theme.color.borderWarm) { %>--border-warm: <%=theme.color.borderWarm %>; --line-1: <%=theme.color.borderWarm %>; --line-2: <%=theme.color.borderWarm %>;<% } %>
+            <% if(theme.color.seriesColor) { %>--series-accent: <%=theme.color.seriesColor %>;<% } %>
+
+            --waline-theme-color: <%=theme.color.font %>;
+            --waline-color: <%=theme.color.font %>;
+            --waline-border-color: <%=theme.color.font %>;
+            --waline-white: <%=theme.color.font %>;
+            --waline-bgcolor-light: <%=theme.color.postBackGround %>;
+        }
+
+        /* ── Waline 评论 ── */
+        .wl-card span.wl-nick { color: <%=theme.color.font %>; }
+        .wl-card .wl-badge { border: 1px solid <%=theme.color.font %>; color: <%=theme.color.font %>; }
+        .wl-btn { border: 1px solid <%=theme.color.font %>; color: <%=theme.color.font %>; }
+        .wl-btn.primary { color: <%=theme.color.postBackGround %>; }
+        .wl-header label { color: <%=theme.color.font %>; }
+        [data-waline] p { color: <%=theme.color.font %>; }
+        [data-waline] a { color: <%=theme.color.font %>; }
+        .wl-sort li.active { color: <%=theme.color.font %>; }
+        .wl-card .wl-meta>span { background: <%=theme.color.postBackGround %>; }
+        .wl-panel { background: <%=theme.color.postBackGround %>; }
+
+        /* ── 其它组件 ── */
+        .index-main { background: <%=theme.color.indexBackGround %>; }
+
+        .progress-wrap .btn-icon { color: <%=theme.color.font %>; }
+        .progress-wrap svg.progress-circle path {
+            stroke: color-mix(in srgb, <%=theme.color.font %> 15%, transparent);
+        }
+        .progress-wrap:hover svg.progress-circle path {
+            stroke: color-mix(in srgb, <%=theme.color.linkBeforeClick %> 50%, transparent);
+        }
+
+        .return-to-last-progress-wrap .btn-icon { color: <%=theme.color.font %>; }
+        .return-to-last-progress-wrap svg.progress-circle path {
+            stroke: color-mix(in srgb, <%=theme.color.font %> 15%, transparent);
+        }
+        .return-to-last-progress-wrap:hover svg.progress-circle path {
+            stroke: color-mix(in srgb, <%=theme.color.linkBeforeClick %> 50%, transparent);
+        }
+
+        .left-toc-container::-webkit-scrollbar-thumb {
+            background-color: <%=theme.color.font %>;
+        }
+    </style>
+<% } %>

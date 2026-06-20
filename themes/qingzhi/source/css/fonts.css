@@ -1,0 +1,14 @@
+@charset "utf-8";
+
+/* ── MiSans — 已迁移到 head.ejs <link> 并行加载── */
+
+/* ── 回退字体 ── */
+
+@font-face {
+    font-family: "notoserifsc-medium";
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url("../fonts/notoserifsc-medium-webfont.woff2") format("woff2"),
+         url("../fonts/notoserifsc-medium-webfont.woff") format("woff");
+}

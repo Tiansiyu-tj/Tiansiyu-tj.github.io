@@ -1,0 +1,42 @@
+{id:'imgcompress',name:'图片压缩',icon:'🗜️',cat:'productivity',desc:'纯浏览器端 · JPEG / WebP · 质量可调',
+html(){return'<div class="t-row" style="justify-content:center"><label class="t-btn t-btn-s" style="cursor:pointer">📂 选择图片 <input type="file" id="icFile" accept="image/*" style="display:none"></label></div><div class="t-row"><span class="t-lbl">格式</span><select class="t-sel" id="icFmt"><option value="image/jpeg">JPEG</option><option value="image/webp">WebP</option><option value="image/png">PNG（无损）</option></select></div><div class="t-row"><span class="t-lbl">画质</span><input type="range" id="icQ" min="1" max="100" value="75" style="width:160px"><span id="icQVal" style="font-size:.78em;color:#888">75%</span></div><div class="t-row"><span class="t-lbl">最大宽度</span><input type="number" class="t-in" id="icMaxW" value="0" style="width:80px"><span style="font-size:.75em;color:#888">px (0=原尺寸)</span></div><div id="icInfo" style="font-size:.78em;color:#888;text-align:center;margin:8px 0"></div><div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><div style="text-align:center"><div style="font-size:.75em;color:#888">原图</div><canvas id="icOrig" style="max-width:200px;max-height:160px;border:1px solid #eee;border-radius:4px"></canvas></div><div style="text-align:center"><div style="font-size:.75em;color:#888">压缩后</div><canvas id="icComp" style="max-width:200px;max-height:160px;border:1px solid #eee;border-radius:4px"></canvas></div></div><div class="t-row" style="justify-content:center;margin-top:8px"><a id="icDl" class="t-btn t-btn-s" style="display:none;text-decoration:none">💾 下载</a></div>'},
+init(el){
+  var qsl=el.querySelector('#icQ'),qv=el.querySelector('#icQVal');
+  var fmtSel=el.querySelector('#icFmt');
+  qsl.oninput=function(){qv.textContent=qsl.value+'%'};
+  fmtSel.onchange=function(){
+    var isPng=this.value==='image/png';
+    qsl.disabled=isPng;qsl.style.opacity=isPng?.4:1;
+    if(el._img)compress(el._img);
+  };
+  function fmt(b){if(b<1024)return b+'B';if(b<1048576)return(b/1024).toFixed(1)+'KB';return(b/1048576).toFixed(2)+'MB'}
+  function compress(img){
+    var mw=+el.querySelector('#icMaxW').value;
+    var w=img.width,h=img.height;
+    if(mw>0&&w>mw){h=Math.round(h*mw/w);w=mw}
+    var oc=el.querySelector('#icOrig'),cc=el.querySelector('#icComp');
+    oc.width=img.width;oc.height=img.height;oc.getContext('2d').drawImage(img,0,0);
+    cc.width=w;cc.height=h;cc.getContext('2d').drawImage(img,0,0,w,h);
+    var mime=fmtSel.value;
+    var q=qsl.value/100;
+    var ext=mime==='image/webp'?'webp':mime==='image/png'?'png':'jpg';
+    cc.toBlob(function(blob){
+      var origSize=el._origSize||0;
+      var pct=((1-blob.size/origSize)*100).toFixed(1);
+      var bigger=blob.size>=origSize;
+      var color=bigger?'#e74c3c':'#27ae60';
+      var warn=bigger?' ⚠️ 压缩后更大！请降低画质或改用 WebP':'';
+      el.querySelector('#icInfo').innerHTML='原始: '+fmt(origSize)+' → 压缩: <span style="color:'+color+';font-weight:600">'+fmt(blob.size)+'</span> ('+pct+'% 减少)'+warn+'<br>尺寸: '+img.width+'×'+img.height+' → '+w+'×'+h;
+      var cImg=new Image();cImg.onload=function(){cc.width=cImg.width;cc.height=cImg.height;cc.getContext('2d').drawImage(cImg,0,0);URL.revokeObjectURL(cImg.src)};cImg.src=URL.createObjectURL(blob);
+      var dl=el.querySelector('#icDl');dl.href=URL.createObjectURL(blob);dl.download='compressed.'+ext;dl.style.display='';
+    },mime,mime==='image/png'?undefined:q);
+  }
+  el.querySelector('#icFile').onchange=function(){
+    var f=this.files[0];if(!f)return;el._origSize=f.size;
+    var img=new Image();img.onload=function(){compress(img)};if(el._imgUrl)URL.revokeObjectURL(el._imgUrl);el._imgUrl=URL.createObjectURL(f);img.src=el._imgUrl;
+    el._img=img;
+  };
+  qsl.onchange=function(){if(el._img)compress(el._img)};
+  el.querySelector('#icMaxW').onchange=function(){if(el._img)compress(el._img)};
+  el._cleanup=function(){if(el._imgUrl)URL.revokeObjectURL(el._imgUrl);var dl=el.querySelector('#icDl');if(dl&&dl.href&&dl.href.indexOf('blob:')===0)URL.revokeObjectURL(dl.href)};
+}}

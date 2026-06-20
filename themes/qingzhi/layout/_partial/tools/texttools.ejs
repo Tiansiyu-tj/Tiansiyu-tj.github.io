@@ -1,0 +1,74 @@
+{id:'texttools',name:'文本处理',icon:'📝',cat:'dev',desc:'行排序 · 去重 · 查找替换 · 前后缀 · 命名风格',
+html(){return '<div class="t-row" style="justify-content:center;gap:8px;margin-bottom:4px"><label class="t-btn t-btn-s" style="cursor:pointer">\ud83d\udcc2 \u6253\u5f00\u6587\u4ef6<input type="file" id="ttFile" accept=".txt,.csv,.tsv,.md,.log,.json,.xml,.yaml,.yml,.ini,.cfg,.conf,.sh,.bat,.py,.js,.ts,.html,.css,.sql,.c,.cpp,.h,.java,.go,.rs,.rb,.php,.pl,.r,.m,.tex,.bib" style="display:none"></label></div>'
++'<textarea class="t-ta" id="ttIn" rows="6" placeholder="在此粘贴文本（按行处理）… 或点击上方按钮上传文件"></textarea>'
++'<div style="font-size:.78em;color:#888;text-align:center;margin:4px 0" id="ttStats"></div>'
+/* 行操作 */
++'<fieldset style="border:1px solid #e8e8e8;border-radius:8px;padding:6px 10px;margin:4px 0"><legend style="font-size:.72em;color:#888;padding:0 4px">\ud83d\udcc4 \u884c\u64cd\u4f5c</legend>'
++'<div style="display:flex;flex-wrap:wrap;gap:4px">'
++'<button class="t-btn t-btn-o tt-op" data-op="sort" style="font-size:.75em">\u2191 \u6392\u5e8f</button>'
++'<button class="t-btn t-btn-o tt-op" data-op="rsort" style="font-size:.75em">\u2193 \u5012\u5e8f</button>'
++'<button class="t-btn t-btn-o tt-op" data-op="dedup" style="font-size:.75em">\u2716 \u53bb\u91cd</button>'
++'<button class="t-btn t-btn-o tt-op" data-op="trim" style="font-size:.75em">\u2702 \u53bb\u7a7a\u884c</button>'
++'<button class="t-btn t-btn-o tt-op" data-op="reverse" style="font-size:.75em">\u21c5 \u53cd\u8f6c\u884c\u5e8f</button>'
++'<button class="t-btn t-btn-o tt-op" data-op="number" style="font-size:.75em"># \u52a0\u884c\u53f7</button>'
++'<button class="t-btn t-btn-o tt-op" data-op="shuffle" style="font-size:.75em">\ud83c\udfb2 \u6253\u4e71</button>'
++'</div></fieldset>'
+/* 文本转换 */
++'<fieldset style="border:1px solid #e8e8e8;border-radius:8px;padding:6px 10px;margin:4px 0"><legend style="font-size:.72em;color:#888;padding:0 4px">\ud83d\udd24 \u6587\u672c\u8f6c\u6362</legend>'
++'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">'
++'<button class="t-btn t-btn-o tt-op" data-op="upper" style="font-size:.75em">ABC \u5927\u5199</button>'
++'<button class="t-btn t-btn-o tt-op" data-op="lower" style="font-size:.75em">abc \u5c0f\u5199</button>'
++'<button class="t-btn t-btn-o tt-op" data-op="snake" style="font-size:.75em">snake_case</button>'
++'<button class="t-btn t-btn-o tt-op" data-op="camel" style="font-size:.75em">camelCase</button>'
++'<button class="t-btn t-btn-o tt-op" data-op="kebab" style="font-size:.75em">kebab-case</button>'
++'<button class="t-btn t-btn-o tt-op" data-op="title" style="font-size:.75em">Title Case</button>'
++'</div>'
++'<div class="t-row" style="gap:4px"><input class="t-in" id="ttPrefix" placeholder="\u524d\u7f00" style="width:80px"><input class="t-in" id="ttSuffix" placeholder="\u540e\u7f00" style="width:80px"><button class="t-btn t-btn-o tt-op" data-op="wrap" style="font-size:.75em">\u2795 \u52a0\u524d\u540e\u7f00</button></div>'
++'</fieldset>'
+/* 查找替换 */
++'<fieldset style="border:1px solid #e8e8e8;border-radius:8px;padding:6px 10px;margin:4px 0"><legend style="font-size:.72em;color:#888;padding:0 4px">\ud83d\udd0d \u67e5\u627e\u66ff\u6362</legend>'
++'<div class="t-row" style="gap:4px"><input class="t-in" id="ttFind" placeholder="\u67e5\u627e" style="flex:1"><input class="t-in" id="ttRepl" placeholder="\u66ff\u6362\u4e3a" style="flex:1">'
++'<label style="font-size:.72em;white-space:nowrap"><input type="checkbox" id="ttRegex"> \u6b63\u5219</label>'
++'<button class="t-btn t-btn-o tt-op" data-op="replace" style="font-size:.75em">\u5168\u90e8\u66ff\u6362</button></div>'
++'</fieldset>'
+/* 输出 */
++'<textarea class="t-ta" id="ttOut" rows="6" readonly style="background:#f8f9fa"></textarea>'
++'<div class="t-row" style="justify-content:center;gap:8px;margin-top:4px">'
++'<button class="t-btn" id="ttCopy" style="font-size:.75em">\ud83d\udccb \u590d\u5236\u7ed3\u679c</button>'
++'<button class="t-btn t-btn-d" id="ttApply" style="font-size:.75em">\u21a9 \u5e94\u7528\u5230\u8f93\u5165</button></div>'},
+init(el){
+  var q=function(s){return el.querySelector(s)};
+  function stats(){var t=q('#ttIn').value;
+    var chars=t.length,words=t.trim()?t.trim().split(/\s+/).length:0,lines=t?t.split('\n').length:0;
+    var cn=(t.match(/[\u4e00-\u9fff]/g)||[]).length;
+    q('#ttStats').textContent='\u5b57\u7b26: '+chars+' | \u8bcd: '+words+' | \u884c: '+lines+' | \u4e2d\u6587: '+cn;
+  }
+  q('#ttIn').oninput=stats;stats();
+  q('#ttFile').onchange=function(){var f=this.files[0];if(!f)return;var r=new FileReader();r.onload=function(){q('#ttIn').value=r.result;stats()};r.readAsText(f)};
+  el.querySelectorAll('.tt-op').forEach(function(btn){btn.onclick=function(){
+    var t=q('#ttIn').value,lines=t.split('\n'),out='';
+    switch(this.dataset.op){
+      case'sort':out=lines.slice().sort(function(a,b){return a.localeCompare(b,'zh')}).join('\n');break;
+      case'rsort':out=lines.slice().sort(function(a,b){return b.localeCompare(a,'zh')}).join('\n');break;
+      case'dedup':var s=[];var seen={};lines.forEach(function(l){if(!seen[l]){seen[l]=1;s.push(l)}});out=s.join('\n');break;
+      case'trim':out=lines.filter(function(l){return l.trim()}).join('\n');break;
+      case'upper':out=t.toUpperCase();break;
+      case'lower':out=t.toLowerCase();break;
+      case'reverse':out=lines.slice().reverse().join('\n');break;
+      case'number':out=lines.map(function(l,i){return(i+1)+'. '+l}).join('\n');break;
+      case'shuffle':var arr=lines.slice();for(var i=arr.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var tmp=arr[i];arr[i]=arr[j];arr[j]=tmp;}out=arr.join('\n');break;
+      case'snake':out=lines.map(function(l){return l.replace(/([a-z])([A-Z])/g,'$1_$2').replace(/[\s\-]+/g,'_').toLowerCase()}).join('\n');break;
+      case'camel':out=lines.map(function(l){return l.replace(/[-_\s]+(.)/g,function(_,c){return c.toUpperCase()})}).join('\n');break;
+      case'kebab':out=lines.map(function(l){return l.replace(/([a-z])([A-Z])/g,'$1-$2').replace(/[\s_]+/g,'-').toLowerCase()}).join('\n');break;
+      case'title':out=lines.map(function(l){return l.replace(/\b\w/g,function(c){return c.toUpperCase()})}).join('\n');break;
+      case'wrap':var pre=q('#ttPrefix').value,suf=q('#ttSuffix').value;out=lines.map(function(l){return pre+l+suf}).join('\n');break;
+      case'replace':
+        var find=q('#ttFind').value,repl=q('#ttRepl').value;if(!find){out=t;break}
+        if(q('#ttRegex').checked){try{out=t.replace(new RegExp(find,'g'),repl)}catch(e){out='\u6b63\u5219\u8868\u8fbe\u5f0f\u9519\u8bef: '+e.message}}
+        else{out=t.split(find).join(repl)}break;
+    }
+    q('#ttOut').value=out;
+  }});
+  q('#ttCopy').onclick=function(){var t=q('#ttOut').value;if(t)navigator.clipboard.writeText(t).then(function(){q('#ttCopy').textContent='\u2713';setTimeout(function(){q('#ttCopy').textContent='\ud83d\udccb \u590d\u5236\u7ed3\u679c'},1500)})};
+  q('#ttApply').onclick=function(){var t=q('#ttOut').value;if(t){q('#ttIn').value=t;q('#ttOut').value='';stats()}};
+}}

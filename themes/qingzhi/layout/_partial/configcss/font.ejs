@@ -1,0 +1,31 @@
+<% if(theme.font.enable) { %>
+    <%# 确定使用的字体名称 %>
+    <% 
+    var fontFamily = "";
+    if(theme.font.cloudFont && theme.font.cloudFont.enable) {
+        // 云端字体优先
+        if(theme.font.cloudFont.provider === 'google-fonts') {
+            fontFamily = theme.font.cloudFont.googleFontFamily.replace(/\+/g, ' ');
+        }
+    } else if(theme.font.LXGWWenKai) {
+        // LXGW 字体
+        fontFamily = "LXGW WenKai";
+    }
+    %>
+    
+    <style>
+        body
+        {
+            font-family: <%= fontFamily ? '"' + fontFamily + '", ' : '' %>"Times New Roman", Helvetica, Tahoma, Arial, "notoserifsc-medium", "Microsoft YaHei", "Hiragino Sans GB", "WenQuanYi Micro Hei", sans-serif !important;
+        }
+        
+        .post-md strong {
+            font-weight: bold;
+            <% if(fontFamily) { %>
+            font-family: "<%= fontFamily %>" !important;
+            <% } else { %>
+            font-family: inherit !important;
+            <% } %>
+        }
+    </style>
+<% } %>

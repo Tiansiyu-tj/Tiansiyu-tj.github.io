@@ -1,0 +1,17 @@
+{id:'gradient',name:'CSS 渐变',icon:'🌈',cat:'dev',desc:'可视化 CSS 渐变编辑器',
+html(){return'<div class="grad-preview" id="gradPrev"></div><div class="t-row"><label class="t-lbl">色1</label><input type="color" id="gradC1" value="#409eff"><label class="t-lbl">色2</label><input type="color" id="gradC2" value="#67c23a"><label class="t-lbl">角度</label><input type="range" id="gradAngle" min="0" max="360" value="135" style="flex:1"><span id="gradDeg">135°</span></div><div class="t-row"><label class="t-lbl">色3</label><input type="color" id="gradC3" value="#f56c6c"><label><input type="checkbox" id="gradUse3"> 三色</label><label class="t-lbl" style="margin-left:12px">类型</label><select class="t-sel" id="gradType"><option value="linear">线性</option><option value="radial">径向</option></select></div><div id="gradCode" class="t-res" style="cursor:pointer" title="点击复制"></div>'},
+init(el){
+  function up(){
+    const c1=el.querySelector('#gradC1').value,c2=el.querySelector('#gradC2').value,c3=el.querySelector('#gradC3').value;
+    const a=el.querySelector('#gradAngle').value,u3=el.querySelector('#gradUse3').checked,type=el.querySelector('#gradType').value;
+    el.querySelector('#gradDeg').textContent=a+'°';
+    el.querySelector('#gradAngle').disabled=type!=='linear';el.querySelector('#gradAngle').style.opacity=type==='linear'?'1':'0.4';el.querySelector('#gradDeg').style.opacity=type==='linear'?'1':'0.4';
+    const stops=u3?c1+', '+c3+', '+c2:c1+', '+c2;
+    const css=type==='linear'?'linear-gradient('+a+'deg, '+stops+')':'radial-gradient(circle, '+stops+')';
+    el.querySelector('#gradPrev').style.background=css;
+    el.querySelector('#gradCode').textContent='background: '+css+';';
+  }
+  ['gradC1','gradC2','gradC3','gradAngle','gradUse3','gradType'].forEach(id=>el.querySelector('#'+id).addEventListener('input',up));
+  el.querySelector('#gradCode').onclick=function(){navigator.clipboard.writeText(this.textContent);this.textContent='✓ 已复制';setTimeout(up,1000)};
+  up();
+}}

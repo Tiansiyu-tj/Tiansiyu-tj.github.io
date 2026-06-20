@@ -1,0 +1,21 @@
+{id:'morse',name:'摩尔斯电码',icon:'📡',cat:'fun',desc:'双向实时互转 · 音频播放',
+html(){return'<div class="t-split"><div><div class="t-lbl">📝 文字（输入即转换）</div><textarea class="t-ta" id="morText" rows="3" placeholder="输入文字，如 HELLO"></textarea></div><div><div class="t-lbl">📡 摩尔斯电码（输入即转换）</div><textarea class="t-ta" id="morCode" rows="3" placeholder="输入电码，空格分隔字母，/ 分隔单词"></textarea></div></div><div class="t-row" style="justify-content:center;margin-top:8px"><button class="t-btn t-btn-s" id="morPlay">🔊 播放电码音</button></div>'},
+init(el){
+  const txt=el.querySelector('#morText'),code=el.querySelector('#morCode');
+  let lock=false;
+  function encode(text){return text.toUpperCase().split('').map(c=>c===' '?'/':MORSE[c]||c).join(' ')}
+  function decode(s){return s.split(' / ').map(word=>word.split(' ').map(c=>MORSE_REV[c]||c).join('')).join(' ')}
+  txt.oninput=()=>{if(lock)return;lock=true;code.value=encode(txt.value);lock=false};
+  code.oninput=()=>{if(lock)return;lock=true;txt.value=decode(code.value);lock=false};
+  txt.value='HELLO WORLD';txt.oninput();
+  el.querySelector('#morPlay').onclick=()=>{
+    const c=code.value;if(!c)return;
+    const actx=new(window.AudioContext||window.webkitAudioContext)();
+    let t=actx.currentTime;const dot=0.08,dash=0.24,gap=0.08,lgap=0.16,wgap=0.4;
+    for(const ch of c){
+      if(ch==='.'){const o=actx.createOscillator();o.frequency.value=700;const g=actx.createGain();g.gain.value=0.3;o.connect(g).connect(actx.destination);o.start(t);o.stop(t+dot);t+=dot+gap}
+      else if(ch==='-'){const o=actx.createOscillator();o.frequency.value=700;const g=actx.createGain();g.gain.value=0.3;o.connect(g).connect(actx.destination);o.start(t);o.stop(t+dash);t+=dash+gap}
+      else if(ch===' ')t+=lgap;else if(ch==='/')t+=wgap;
+    }
+  };
+}}

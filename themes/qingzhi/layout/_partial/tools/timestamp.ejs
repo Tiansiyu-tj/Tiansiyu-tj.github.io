@@ -1,0 +1,48 @@
+{id:'timestamp',name:'时间戳转换',icon:'🕐',cat:'dev',desc:'Unix 时间戳 · 实时互转 · 时区支持',
+html(){
+  function opts(min,max,pad){let h='';for(let i=min;i<=max;i++)h+='<option value="'+i+'">'+(pad&&i<10?'0'+i:i)+'</option>';return h}
+  return'<div class="t-split"><div><div class="t-lbl">Unix 时间戳 (秒)</div><input class="t-in" id="tsUnix" style="font-family:monospace;font-size:1.1em"></div><div><div class="t-lbl">毫秒时间戳</div><input class="t-in" id="tsMs" style="font-family:monospace;font-size:1.1em"></div></div>'+
+  '<div style="margin:12px 0"><div class="t-lbl" style="margin-bottom:6px">📅 日期时间选择</div>'+
+  '<div style="display:flex;gap:3px;align-items:center;flex-wrap:wrap">'+
+  '<select class="t-sel ts-u" id="tsY" style="width:75px">'+opts(1970,2100)+'</select><span style="color:#aaa;font-size:.78em">年</span>'+
+  '<select class="t-sel ts-u" id="tsM" style="width:52px">'+opts(1,12,true)+'</select><span style="color:#aaa;font-size:.78em">月</span>'+
+  '<select class="t-sel ts-u" id="tsD" style="width:52px">'+opts(1,31,true)+'</select><span style="color:#aaa;font-size:.78em">日</span>'+
+  '<span style="color:#ccc;margin:0 2px">|</span>'+
+  '<select class="t-sel ts-u" id="tsHH" style="width:52px">'+opts(0,23,true)+'</select><span style="font-weight:700;color:#999">:</span>'+
+  '<select class="t-sel ts-u" id="tsMM" style="width:52px">'+opts(0,59,true)+'</select><span style="font-weight:700;color:#999">:</span>'+
+  '<select class="t-sel ts-u" id="tsSS" style="width:52px">'+opts(0,59,true)+'</select>'+
+  '</div></div>'+
+  '<div id="tsLive" style="text-align:center;margin:14px 0;padding:12px;background:linear-gradient(135deg,#f0f4ff,#f8f9fa);border-radius:10px">'+
+  '<div style="font-size:.72em;color:#999">当前时间</div>'+
+  '<div id="tsNow" style="font-size:1.4em;font-weight:700;font-family:monospace;color:#409eff"></div>'+
+  '<div id="tsNowUnix" style="font-size:.82em;color:#888;font-family:monospace"></div>'+
+  '</div><div id="tsDetail" class="t-res" style="line-height:1.6"></div>';
+},
+init(el){
+  const q=s=>el.querySelector(s);
+  const days=['日','一','二','三','四','五','六'];
+  function daysInMonth(y,m){return new Date(y,m,0).getDate()}
+  function updateDays(){
+    var y=+q('#tsY').value,m=+q('#tsM').value,maxD=daysInMonth(y,m),curD=+q('#tsD').value;
+    var sel=q('#tsD'),html='';for(var i=1;i<=maxD;i++)html+='<option value="'+i+'">'+(i<10?'0'+i:i)+'</option>';
+    sel.innerHTML=html;sel.value=Math.min(curD,maxD);
+  }
+  function setNow(){const n=new Date();q('#tsNow').textContent=n.toLocaleString('zh-CN',{hour12:false});q('#tsNowUnix').textContent='Unix: '+Math.floor(n.getTime()/1000)}
+  function showDetail(d){
+    var tz=d.getTimezoneOffset(),tzH=Math.floor(Math.abs(tz)/60),tzM=Math.abs(tz)%60,tzSign=tz<=0?'+':'-',tzStr='UTC'+tzSign+String(tzH).padStart(2,'0')+':'+String(tzM).padStart(2,'0');
+    q('#tsDetail').textContent=tzStr+': '+d.toLocaleString('zh-CN',{hour12:false})+'\nUTC:  '+d.toUTCString()+'\nISO:  '+d.toISOString()+'\n星期'+days[d.getDay()]+' · 第'+(Math.floor((d-new Date(d.getFullYear(),0,1))/86400000)+1)+'天 · '+d.getFullYear()+'年';
+  }
+  function fillParts(d){q('#tsY').value=d.getFullYear();q('#tsM').value=d.getMonth()+1;updateDays();q('#tsD').value=d.getDate();q('#tsHH').value=d.getHours();q('#tsMM').value=d.getMinutes();q('#tsSS').value=d.getSeconds()}
+  function partsToDate(){return new Date(+q('#tsY').value,+q('#tsM').value-1,+q('#tsD').value,+q('#tsHH').value,+q('#tsMM').value,+q('#tsSS').value)}
+  let lock=false;
+  function fromUnix(){if(lock)return;lock=true;const ts=+q('#tsUnix').value;if(!isNaN(ts)){const d=new Date(ts*1000);q('#tsMs').value=ts*1000;fillParts(d);showDetail(d)}lock=false}
+  function fromMs(){if(lock)return;lock=true;const ms=+q('#tsMs').value;if(!isNaN(ms)){const d=new Date(ms);q('#tsUnix').value=Math.floor(ms/1000);fillParts(d);showDetail(d)}lock=false}
+  function fromParts(){if(lock)return;lock=true;const d=partsToDate();const ts=Math.floor(d.getTime()/1000);q('#tsUnix').value=ts;q('#tsMs').value=d.getTime();showDetail(d);lock=false}
+  const now=new Date();q('#tsUnix').value=Math.floor(now.getTime()/1000);q('#tsMs').value=now.getTime();fillParts(now);showDetail(now);
+  q('#tsUnix').addEventListener('input',fromUnix);q('#tsMs').addEventListener('input',fromMs);
+  q('#tsY').addEventListener('change',function(){updateDays();fromParts()});
+  q('#tsM').addEventListener('change',function(){updateDays();fromParts()});
+  el.querySelectorAll('.ts-u').forEach(inp=>{if(inp.id!=='tsY'&&inp.id!=='tsM')inp.addEventListener('change',fromParts)});
+  setNow();const timer=setInterval(setNow,1000);
+  el._cleanup=()=>clearInterval(timer);
+}}

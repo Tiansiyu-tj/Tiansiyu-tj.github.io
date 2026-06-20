@@ -1,0 +1,33 @@
+{id:'favicon',name:'Favicon生成',icon:'🖼️',cat:'productivity',desc:'上传图片 → 多尺寸 favicon',
+html(){return'<div class="t-row" style="justify-content:center"><label class="t-btn t-btn-s" style="cursor:pointer">📂 上传图标 <input type="file" id="favFile" accept="image/*" style="display:none"></label></div><div style="text-align:center;margin:8px 0"><canvas id="favPrev" width="128" height="128" style="border:1px solid #eee;border-radius:8px;background:#f9f9f9"></canvas></div><div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:8px 0" id="favSizes"><label><input type="checkbox" value="16" checked> 16px</label><label><input type="checkbox" value="32" checked> 32px</label><label><input type="checkbox" value="48" checked> 48px</label><label><input type="checkbox" value="64" checked> 64px</label><label><input type="checkbox" value="128"> 128px</label><label><input type="checkbox" value="192"> 192px</label><label><input type="checkbox" value="512"> 512px</label></div><div id="favOut" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:10px"></div>'},
+init(el){
+  let img=null;
+  el.querySelector('#favFile').onchange=function(){
+    const f=this.files[0];if(!f)return;
+    img=new Image();img.onload=()=>{
+      const c=el.querySelector('#favPrev'),ctx=c.getContext('2d');ctx.clearRect(0,0,128,128);
+      const s=Math.min(128/img.width,128/img.height);const w=img.width*s,h=img.height*s;
+      ctx.drawImage(img,(128-w)/2,(128-h)/2,w,h);gen();
+    };if(el._favUrl)URL.revokeObjectURL(el._favUrl);el._favUrl=URL.createObjectURL(f);img.src=el._favUrl;
+  };
+  function gen(){
+    if(!img)return;const out=el.querySelector('#favOut');out.innerHTML='';
+    el.querySelectorAll('#favSizes input:checked').forEach(cb=>{
+      const sz=+cb.value,c=document.createElement('canvas');c.width=c.height=sz;
+      var s=Math.min(sz/img.width,sz/img.height),w=img.width*s,h=img.height*s;
+      c.getContext('2d').drawImage(img,(sz-w)/2,(sz-h)/2,w,h);
+      c.toBlob(blob=>{
+        const wrap=document.createElement('div');wrap.style.cssText='text-align:center';
+        const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='favicon-'+sz+'x'+sz+'.png';
+        a.className='t-btn t-btn-d';a.style.cssText='font-size:.72em;display:block;text-decoration:none';
+        a.textContent='💾 '+sz+'px';
+        const prev=document.createElement('canvas');prev.width=prev.height=Math.min(sz,64);prev.style.cssText='border:1px solid #eee;border-radius:4px';
+        prev.getContext('2d').drawImage(img,0,0,prev.width,prev.height);
+        wrap.appendChild(prev);wrap.appendChild(document.createElement('br'));wrap.appendChild(a);
+        out.appendChild(wrap);
+      },'image/png');
+    });
+  }
+  el.querySelectorAll('#favSizes input').forEach(cb=>cb.onchange=gen);
+  el._cleanup=function(){if(el._favUrl)URL.revokeObjectURL(el._favUrl)};
+}}

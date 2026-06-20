@@ -1,0 +1,29 @@
+{id:'hash',name:'Hash 计算',icon:'🔑',cat:'dev',desc:'MD5 / SHA 多算法 · 文本与文件',
+html(){return'<div class="t-row"><label><input type="checkbox" id="haMd5"> MD5</label><label><input type="checkbox" id="haSha1"> SHA-1</label><label><input type="checkbox" id="haSha256" checked> SHA-256</label><label><input type="checkbox" id="haSha384"> SHA-384</label><label><input type="checkbox" id="haSha512"> SHA-512</label></div><div class="t-lbl">文本输入</div><textarea class="t-ta" id="hashIn" rows="3">Hello World</textarea><div class="t-row" style="margin-top:6px"><button class="t-btn" id="hashCalc">计算文本Hash</button><span style="color:#999;font-size:.82em">或</span><input type="file" id="hashFile"><button class="t-btn t-btn-o" id="hashFileCalc">计算文件Hash</button></div><div id="hashOut" class="t-res"></div>'},
+async init(el){
+  if(!window.crypto||!window.crypto.subtle){el.querySelector('#hashOut').textContent='⚠️ 此功能需要 HTTPS 或 localhost 环境（crypto.subtle 不可用）';el.querySelector('#hashCalc').disabled=true;el.querySelector('#hashFileCalc').disabled=true;return}
+  async function hashData(data){
+    var algos=[];
+    if(el.querySelector('#haMd5').checked)algos.push('MD5');
+    if(el.querySelector('#haSha1').checked)algos.push('SHA-1');
+    if(el.querySelector('#haSha256').checked)algos.push('SHA-256');
+    if(el.querySelector('#haSha384').checked)algos.push('SHA-384');
+    if(el.querySelector('#haSha512').checked)algos.push('SHA-512');
+    if(!algos.length){el.querySelector('#hashOut').textContent='请至少选择一种算法';return}
+    var results=[];
+    for(var ai=0;ai<algos.length;ai++){
+      var algo=algos[ai];
+      if(algo==='MD5'){
+        if(typeof md5==='undefined')await loadJS('https://cdn.jsdelivr.net/npm/js-md5@0.8.3/src/md5.min.js');
+        results.push('MD5: '+md5(data));
+      }else{
+        var buf=await crypto.subtle.digest(algo,data);
+        var hex=[].slice.call(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0')}).join('');
+        results.push(algo+': '+hex);
+      }
+    }
+    el.querySelector('#hashOut').textContent=results.join('\n');
+  }
+  el.querySelector('#hashCalc').onclick=function(){hashData(new TextEncoder().encode(el.querySelector('#hashIn').value))};
+  el.querySelector('#hashFileCalc').onclick=function(){var f=el.querySelector('#hashFile').files[0];if(!f){el.querySelector('#hashOut').textContent='请先选择文件';return}f.arrayBuffer().then(function(buf){hashData(new Uint8Array(buf))})};
+}}

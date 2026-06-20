@@ -1,0 +1,321 @@
+{id:'audioplayer',name:'\u97f3\u9891\u64ad\u653e\u5668',icon:'\ud83c\udfa7',cat:'music',desc:'\u7f51\u6613\u4e91/QQ/\u9177\u72d7\u89e3\u6790 \u00b7 \u6b4c\u8bcd \u00b7 \u4e0b\u8f7d',
+html(){return '<style>'
++'.ap-upper{display:flex;gap:10px;margin:4px 0;flex-wrap:wrap}'
++'.ap-input-area{flex:1;min-width:200px}'
++'.ap-lrc-area{background:linear-gradient(135deg,#0d1117,#161b22);border-radius:10px;padding:22px 16px;min-height:80px;display:flex;flex-direction:column;align-items:center;justify-content:center;margin:6px 0;gap:4px}'
++'.ap-lrc-line{color:rgba(255,255,255,.35);font-size:13px;line-height:1.8;transition:all .35s ease;text-align:center}'
++'.ap-lrc-line.active{color:#fff;font-size:16px;font-weight:600;text-shadow:0 0 12px rgba(64,158,255,.45)}'
++'.ap-lrc-empty{color:rgba(255,255,255,.2);font-size:13px}'
++'.ap-player-box{margin:6px 0}'
++'.ap-player-box.aplayer{box-shadow:none!important;border:1px solid #e8e8e8!important;border-radius:10px!important}'
++'.ap-player-box .aplayer-lrc{height:0!important;overflow:hidden!important;margin:0!important;padding:0!important}'
++'.ap-player-box .aplayer-list{display:block!important;height:auto!important;max-height:400px!important;overflow-y:auto!important}'
++'.ap-player-box .aplayer-list ol{display:block!important}'
++'.ap-ctrls{display:none;align-items:center;justify-content:center;gap:16px;margin:6px 0;padding:6px 0}'
++'.ap-cb{background:none;border:1px solid #ddd;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;color:#666;padding:0}'
++'.ap-cb:hover{border-color:#409EFF;color:#409EFF}'
++'.ap-cb-sm{width:32px;height:32px;font-size:13px}'
++'.ap-cb-lg{width:42px;height:42px;font-size:18px;border-color:#409EFF;color:#409EFF}'
++'.ap-status{text-align:center;font-size:.72em;margin:2px 0;min-height:1.2em}'
++'.ap-player-box .aplayer-list ol li{position:relative!important;padding-right:48px!important}'
++'.ap-dl-wrap{position:absolute;right:4px;top:0;bottom:0;display:flex;align-items:center;gap:2px}'
++'.ap-player-box .aplayer-list ol li .ap-dl-wrap{opacity:0;transition:opacity .15s}'
++'.ap-player-box .aplayer-list ol li:hover .ap-dl-wrap{opacity:1}'
++'.ap-dl-wrap a{color:#bbb;font-size:11px;text-decoration:none;padding:2px 3px;border-radius:3px;transition:color .2s;cursor:pointer}'
++'.ap-dl-wrap a:hover{color:#409EFF}'
++'.ap-mode-inline{cursor:pointer;display:inline-flex!important;align-items:center;justify-content:center;padding:0 3px}'
++'.ap-mode-inline svg{width:15px;height:15px;fill:#409EFF;opacity:.7;transition:opacity .2s}'
++'.ap-mode-inline:hover svg{opacity:1}'
++'@media(hover:none){.ap-dl-wrap{opacity:1!important}}'
++'</style>'
++'<div class="ap-upper"><div class="ap-input-area">'
++'<input class="t-in" id="apUrl" placeholder="\u7c98\u8d34\u97f3\u4e50\u94fe\u63a5\u6216\u8f93\u5165 ID\u2026" style="width:100%;margin-bottom:6px">'
++'<div style="font-size:.68em;color:#aaa;margin:2px 0">\u652f\u6301\u7f51\u6613\u4e91/QQ\u97f3\u4e50/\u9177\u72d7 \u00b7 \u6b4c\u5355/\u5355\u66f2/\u4e13\u8f91 \u00b7 \u7c98\u8d34\u94fe\u63a5\u81ea\u52a8\u89e3\u6790<br>\u26a0 \u4ec5\u53ef\u89e3\u6790\u514d\u8d39\u6b4c\u66f2\uff0cVIP\u53ca\u4e91\u76d8\u6b4c\u66f2\u65e0\u6cd5\u64ad\u653e</div>'
++'<div class="t-row" style="gap:6px">'
++'<button class="t-btn" id="apGo">\u25b6 \u52a0\u8f7d</button>'
++'<label class="t-btn t-btn-s" style="cursor:pointer">\ud83d\udcc2 \u672c\u5730\u6587\u4ef6<input type="file" id="apFile" accept="audio/*" multiple style="display:none"></label>'
++'</div></div></div>'
++'<div class="ap-lrc-area" id="apLrc"><span class="ap-lrc-empty">\u266a</span></div>'
++'<div class="ap-ctrls" id="apCtrls">'
++'<button class="ap-cb ap-cb-sm" id="apPrev" title="\u4e0a\u4e00\u9996">\u23ee</button>'
++'<button class="ap-cb ap-cb-lg" id="apPlayPause" title="\u64ad\u653e/\u6682\u505c">\u25b6</button>'
++'<button class="ap-cb ap-cb-sm" id="apNext" title="\u4e0b\u4e00\u9996">\u23ed</button>'
++'</div>'
++'<div class="ap-player-box" id="apBox"></div>'
++'<div class="ap-status" id="apStatus"></div>'
++'<div id="apAlbumDl" style="display:none;margin:6px 0;text-align:center">'
++'<div class="t-row" style="gap:6px;justify-content:center;flex-wrap:wrap">'
++'<button class="t-btn t-btn-o" id="apDlAllAudio" style="font-size:.72em">\u2b07 \u5168\u90e8\u97f3\u9891</button>'
++'<button class="t-btn t-btn-o" id="apDlAllLrc" style="font-size:.72em">\ud83d\udcdd \u5168\u90e8\u6b4c\u8bcd</button>'
++'</div>'
++'<div style="font-size:.65em;color:#bbb;margin-top:2px">\u26a0 \u5927\u91cf\u4e0b\u8f7d\u53ef\u80fd\u89e6\u53d1\u6d4f\u89c8\u5668\u5f39\u7a97\u62e6\u622a</div>'
++'</div>'},
+init(el){
+  var q=function(s){return el.querySelector(s)};
+  var lrcEl=q('#apLrc'),statusEl=q('#apStatus');
+  var apInstance=null,trackList=[];
+
+  function setStatus(msg,type){statusEl.textContent=msg||'';statusEl.style.color=type==='error'?'#f56c6c':type==='warn'?'#e6a23c':'#909399'}
+
+  /* ===== URL \u89e3\u6790 ===== */
+  function parseUrl(input){
+    input=input.trim();var r={server:'netease',type:'song',id:''};var m;
+    if(m=input.match(/music\.163\.com.*(?:#\/|\/)(song|playlist|album|artist)\?id=(\d+)/i)){r.server='netease';r.type=m[1];r.id=m[2];return r}
+    if(m=input.match(/music\.163\.com.*[?&]id=(\d+)/i)){r.server='netease';r.id=m[1];if(/playlist/i.test(input))r.type='playlist';else if(/album/i.test(input))r.type='album';else if(/artist/i.test(input))r.type='artist';return r}
+    if(m=input.match(/y\.qq\.com.*\/(songDetail|playlist|albumDetail)\/(\w+)/i)){r.server='tencent';r.id=m[2];r.type=m[1]==='playlist'?'playlist':m[1]==='albumDetail'?'album':'song';return r}
+    if(m=input.match(/y\.qq\.com.*[?&]id=(\w+)/i)){r.server='tencent';r.id=m[1];return r}
+    if(/kugou\.com/i.test(input)){r.server='kugou';if(m=input.match(/hash=([a-fA-F0-9]+)/i))r.id=m[1];else if(m=input.match(/(\d{5,})/))r.id=m[1];return r}
+    if(/^\d+$/.test(input)){r.id=input;return r}
+    if(m=input.match(/(\d{5,})/))r.id=m[1];else r.id=input;return r;
+  }
+
+  /* ===== \u4f9d\u8d56\u52a0\u8f7d ===== */
+  function ensureAP(cb){
+    if(window.APlayer){cb();return}
+    if(!document.querySelector('link[href*="APlayer"]')){var l=document.createElement('link');l.rel='stylesheet';l.href='/js/aplayer/APlayer.min.css';document.head.appendChild(l)}
+    var s=document.createElement('script');s.src='/js/aplayer/APlayer.min.js';s.onload=cb;document.head.appendChild(s);
+  }
+
+  /* ===== Meting API \u76f4\u63a5\u8bf7\u6c42 + \u6b4c\u8bcd\u9884\u53d6 + sessionStorage \u7f13\u5b58 ===== */
+  function metingFetch(server,type,id,cb){
+    var cacheKey='ap_'+server+'_'+type+'_'+id;
+    try{var cached=sessionStorage.getItem(cacheKey);if(cached){cb(null,JSON.parse(cached));return}}catch(e){}
+    var apis=window.meting_api_list||[window.meting_api||'https://api.injahow.cn/meting/?server=:server&type=:type&id=:id&r=:r'];
+    function tryApi(idx){
+      if(idx>=apis.length){cb(new Error('\u6240\u6709API\u5747\u4e0d\u53ef\u7528'));return}
+      var api=apis[idx];
+      var url=api.replace(':server',server).replace(':type',type).replace(':id',id).replace(':r',Math.random());
+      fetch(url).then(function(r){return r.json()}).then(function(data){
+        if(!Array.isArray(data)){
+          tryApi(idx+1);return;
+        }
+        var list=[];
+        data.forEach(function(d){
+          if(d.url)list.push({name:d.name||d.title||'Unknown',artist:d.artist||d.author||'',url:d.url,cover:d.pic||d.cover||'',lrc:d.lrc||''});
+        });
+        if(!list.length){tryApi(idx+1);return}
+        var lrcItems=list.filter(function(it){return it.lrc&&it.lrc.indexOf('http')===0});
+        function fetchBatch(bIdx){
+          if(bIdx>=lrcItems.length){try{sessionStorage.setItem(cacheKey,JSON.stringify(list))}catch(e){}cb(null,list);return}
+          var batch=lrcItems.slice(bIdx,bIdx+5);
+          Promise.all(batch.map(function(it){
+            var u=it.lrc;
+            return fetch(u).then(function(r){return r.text()}).then(function(txt){it.lrc=(txt&&txt.indexOf('[')>=0)?txt:''}).catch(function(){it.lrc=''});
+          })).then(function(){fetchBatch(bIdx+5)});
+        }
+        if(lrcItems.length){fetchBatch(0)}else{try{sessionStorage.setItem(cacheKey,JSON.stringify(list))}catch(e){}cb(null,list)}
+      }).catch(function(e){
+        tryApi(idx+1);
+      });
+    }
+    tryApi(0);
+  }
+
+  /* ===== \u6b4c\u8bcd\u955c\u50cf ===== */
+  function mirrorLrc(){
+    var box=q('#apBox');if(!box)return;
+    var cur=box.querySelector('.aplayer-lrc-current');
+    if(!cur||!cur.textContent.trim()){lrcEl.innerHTML='<span class="ap-lrc-empty">\u266a</span>';return}
+    var html='';
+    var p=cur.previousElementSibling;
+    if(p&&p.textContent.trim())html+='<div class="ap-lrc-line">'+p.textContent+'</div>';
+    html+='<div class="ap-lrc-line active">'+cur.textContent+'</div>';
+    var n1=cur.nextElementSibling;
+    if(n1&&n1.textContent.trim())html+='<div class="ap-lrc-line">'+n1.textContent+'</div>';
+    var n2=n1&&n1.nextElementSibling;
+    if(n2&&n2.textContent.trim())html+='<div class="ap-lrc-line">'+n2.textContent+'</div>';
+    lrcEl.innerHTML=html;
+  }
+
+  /* ===== \u6bcf\u9996\u6b4c\u4e0b\u8f7d (MP3 + LRC) ===== */
+  function injectDlBtns(){
+    var box=q('#apBox');if(!box||!trackList.length)return;
+    var items=box.querySelectorAll('.aplayer-list ol li');
+    items.forEach(function(li,i){
+      if(li.querySelector('.ap-dl-wrap'))return;
+      var t=trackList[i];if(!t)return;
+      var wrap=document.createElement('span');wrap.className='ap-dl-wrap';
+      /* MP3 */
+      if(t.url){
+        var a=document.createElement('a');a.href=t.url;a.target='_blank';
+        a.download=(t.name||'track')+'.mp3';a.title='\u4e0b\u8f7d\u97f3\u9891';a.textContent='\u2b07';
+        a.onclick=function(e){e.stopPropagation()};wrap.appendChild(a);
+      }
+      /* LRC */
+      if(t.lrc&&t.lrc.indexOf('[')>=0){
+        var la=document.createElement('a');la.href='#';la.title='\u4e0b\u8f7d\u6b4c\u8bcd';la.textContent='\ud83d\udcdd';
+        var lrcText=t.lrc;var lrcName=t.name;
+        la.onclick=function(e){e.preventDefault();e.stopPropagation();
+          var blob=new Blob([lrcText],{type:'text/plain'});var dl=document.createElement('a');
+          dl.href=URL.createObjectURL(blob);dl.download=(lrcName||'lyrics')+'.lrc';
+          document.body.appendChild(dl);dl.click();document.body.removeChild(dl);URL.revokeObjectURL(dl.href);
+        };
+        wrap.appendChild(la);
+      }
+      li.appendChild(wrap);
+    });
+  }
+
+  /* ===== \u64ad\u653e\u6a21\u5f0f ===== */
+  var svgShuffle='<svg viewBox="0 0 32 32"><path d="M22.667 4l7 6-7 6 7 6-7 6v-4h-3.653l-3.76-3.76 2.827-2.827 2.587 2.587h2v-8h-2l-12 12h-6v-4h4.347l12-12h3.653v-4zM2.667 8h6l3.76 3.76-2.827 2.827-2.587-2.587h-4.347v-4z"/></svg>';
+  var svgRepeat='<svg viewBox="0 0 29 32"><path d="M9.333 9.333h13.333v4l5.333-5.333-5.333-5.333v4h-16v8h2.667v-5.333zM22.667 22.667h-13.333v-4l-5.333 5.333 5.333 5.333v-4h16v-8h-2.667v5.333z"/></svg>';
+  var svgRepeat1='<svg viewBox="0 0 33 32"><path d="M9.333 9.333h13.333v4l5.333-5.333-5.333-5.333v4h-16v8h2.667v-5.333zM22.667 22.667h-13.333v-4l-5.333 5.333 5.333 5.333v-4h16v-8h-2.667v5.333zM17.333 20v-8h-1.333l-2.667 1.333v1.333h2v5.333h2z"/></svg>';
+  var svgOnce='<svg viewBox="0 0 22 32"><path d="M22 16l-10.105-10.6-1.895 1.987 8.211 8.613-8.211 8.612 1.895 1.988z"/></svg>';
+  var modeList=[
+    {svg:svgShuffle,title:'\u5217\u8868\u968f\u673a'},
+    {svg:svgRepeat,title:'\u5217\u8868\u987a\u5e8f'},
+    {svg:svgRepeat1,title:'\u5355\u66f2\u5faa\u73af'},
+    {svg:svgOnce,title:'\u64ad\u5b8c\u505c\u6b62'}
+  ];
+  var mi=0;
+
+  function setupModeBtn(){
+    var box=q('#apBox');
+    var loopBtn=box.querySelector('.aplayer-icon-loop');
+    var orderBtn=box.querySelector('.aplayer-icon-order');
+    if(!loopBtn||!orderBtn)return;
+    var hideCSS=';width:0!important;padding:0!important;margin:0!important;overflow:hidden;opacity:0;pointer-events:none';
+    loopBtn.style.cssText+=hideCSS;orderBtn.style.cssText+=hideCSS;
+    var btn=document.createElement('span');btn.className='aplayer-icon ap-mode-inline';
+    mi=0;
+    function upd(){btn.innerHTML=modeList[mi].svg;btn.title=modeList[mi].title}
+    upd();
+    var clickMap=[
+      function(){orderBtn.click()},
+      function(){loopBtn.click()},
+      function(){loopBtn.click()},
+      function(){loopBtn.click();orderBtn.click()}
+    ];
+    btn.onclick=function(e){e.stopPropagation();clickMap[mi]();mi=(mi+1)%modeList.length;upd()};
+    orderBtn.parentNode.insertBefore(btn,orderBtn);
+  }
+
+  /* ===== \u5f3a\u5236\u5e03\u5c40 ===== */
+  function forceLayout(){
+    var box=q('#apBox');if(!box)return;
+    box.classList.remove('aplayer-narrow');
+    box.classList.remove('aplayer-arrow');
+    box.classList.remove('aplayer-withlrc');
+    box.classList.add('aplayer-withlist');
+    var tn=box.querySelector('.aplayer-time');if(tn)tn.classList.remove('aplayer-time-narrow');
+    var list=box.querySelector('.aplayer-list');if(list){list.style.display='block';list.style.height='auto'}
+    var lo=box.querySelector('.aplayer-list ol');if(lo)lo.style.display='block';
+  }
+
+  /* ===== \u6838\u5fc3 ===== */
+  function createPlayer(audioList){
+    if(apInstance){try{apInstance.pause();apInstance.destroy()}catch(e){}apInstance=null}
+    var box=q('#apBox');box.innerHTML='';
+    ensureAP(function(){
+      var hasLrc=false;
+      for(var i=0;i<audioList.length;i++){if(audioList[i].lrc&&audioList[i].lrc.indexOf('[')>=0){hasLrc=true;break}}
+      apInstance=new APlayer({container:box,audio:audioList,theme:'#409EFF',volume:0.7,lrcType:hasLrc?1:0,listFolded:false,loop:'all',order:audioList.length>1?'random':'list'});
+      trackList=audioList;
+      function tryInject(n){
+        forceLayout();
+        var lis=box.querySelectorAll('.aplayer-list ol li');
+        if(lis&&lis.length){injectDlBtns();setupModeBtn();showAlbumDl()}
+        else if(n<10){setTimeout(function(){tryInject(n+1)},300)}
+      }
+      setTimeout(function(){tryInject(0)},200);
+      q('#apCtrls').style.display='flex';
+      hookAudio();
+    });
+  }
+
+  function loadMeting(server,type,id){
+    setStatus('\u52a0\u8f7d\u4e2d\u2026');
+    metingFetch(server,type,id,function(err,list){
+      if(err||!list||!list.length){setStatus(err&&err.message&&err.message!=='empty'?err.message:'\u52a0\u8f7d\u5931\u8d25\uff0c\u8bf7\u68c0\u67e5\u94fe\u63a5\u6216\u7f51\u7edc','error');return}
+      setStatus('');
+      createPlayer(list);
+    });
+  }
+
+  function loadLocal(files){
+    var list=[];
+    Array.from(files).forEach(function(f){list.push({name:f.name.replace(/\.[^.]+$/,''),artist:'Local',url:URL.createObjectURL(f),cover:'',lrc:''})});
+    createPlayer(list);
+  }
+
+  function hookAudio(){
+    if(!apInstance)return;
+    var audio=apInstance.audio;if(!audio)return;
+    var ppBtn=q('#apPlayPause');
+    audio.addEventListener('play',function(){setStatus('');if(ppBtn)ppBtn.textContent='\u23f8'});
+    audio.addEventListener('pause',function(){if(ppBtn)ppBtn.textContent='\u25b6'});
+    audio.addEventListener('timeupdate',function(){mirrorLrc()});
+    audio.addEventListener('error',function(){
+      var msg='\u64ad\u653e\u5931\u8d25';
+      if(audio.error){
+        switch(audio.error.code){
+          case 1:msg='\u52a0\u8f7d\u88ab\u4e2d\u65ad';break;
+          case 2:msg='\u7f51\u7edc\u9519\u8bef';break;
+          case 3:msg='\u97f3\u9891\u89e3\u7801\u5931\u8d25';break;
+          case 4:msg='\u97f3\u6e90\u4e0d\u53ef\u7528\uff0c\u53ef\u80fd\u4e3a VIP \u6216\u5df2\u4e0b\u67b6';break;
+        }
+      }
+      setStatus(msg,'error');
+    });
+    if(apInstance.on){
+      apInstance.on('listswitch',function(){
+        setStatus('');lrcEl.innerHTML='<span class="ap-lrc-empty">\u266a</span>';
+        setTimeout(function(){injectDlBtns()},400);
+      });
+    }
+  }
+
+  /* ===== \u6279\u91cf\u4e0b\u8f7d ===== */
+  function showAlbumDl(){q('#apAlbumDl').style.display=trackList.length>=2?'':'none'}
+
+  q('#apDlAllAudio').onclick=function(){
+    if(!trackList.length)return;
+    if(trackList.length>10&&!confirm('\u5c06\u4e0b\u8f7d '+trackList.length+' \u4e2a\u97f3\u9891\u6587\u4ef6\uff0c\u53ef\u80fd\u89e6\u53d1\u6d4f\u89c8\u5668\u62e6\u622a\u3002\u7ee7\u7eed\uff1f'))return;
+    var i=0;
+    function dlNext(){
+      if(i>=trackList.length)return;var t=trackList[i];
+      if(t.url){var a=document.createElement('a');a.href=t.url;a.target='_blank';a.download=(t.name||'track_'+i)+'.mp3';document.body.appendChild(a);a.click();document.body.removeChild(a)}
+      i++;setTimeout(dlNext,500);
+    }
+    dlNext();
+  };
+
+  q('#apDlAllLrc').onclick=function(){
+    var lrcT=trackList.filter(function(t){return t.lrc&&t.lrc.indexOf('[')>=0});
+    if(!lrcT.length){setStatus('\u6682\u65e0\u53ef\u4e0b\u8f7d\u7684\u6b4c\u8bcd','warn');return}
+    if(!confirm('\u5c06\u4e0b\u8f7d '+lrcT.length+' \u4e2a\u6b4c\u8bcd\u6587\u4ef6\uff0c\u53ef\u80fd\u89e6\u53d1\u6d4f\u89c8\u5668\u62e6\u622a\u3002\u7ee7\u7eed\uff1f'))return;
+    lrcT.forEach(function(t,i){
+      setTimeout(function(){
+        var blob=new Blob([t.lrc],{type:'text/plain'});var a=document.createElement('a');
+        a.href=URL.createObjectURL(blob);a.download=(t.name||'lyrics_'+i)+'.lrc';
+        document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(a.href);
+      },i*300);
+    });
+  };
+
+  /* ===== \u4e8b\u4ef6 ===== */
+  q('#apPrev').onclick=function(){if(apInstance)apInstance.skipBack()};
+  q('#apPlayPause').onclick=function(){if(apInstance)apInstance.toggle()};
+  q('#apNext').onclick=function(){if(apInstance)apInstance.skipForward()};
+
+  q('#apGo').onclick=function(){
+    var v=q('#apUrl').value;if(!v.trim())return;
+    var r=parseUrl(v);if(!r.id)return;
+    if(apInstance){try{apInstance.pause();apInstance.destroy()}catch(e){}}
+    trackList=[];apInstance=null;setStatus('');
+    loadMeting(r.server,r.type,r.id);
+  };
+  q('#apUrl').onkeydown=function(e){if(e.key==='Enter')q('#apGo').click()};
+  q('#apFile').onchange=function(){
+    var f=this.files;if(!f||!f.length)return;
+    if(apInstance){try{apInstance.pause();apInstance.destroy()}catch(e){}}
+    trackList=[];apInstance=null;setStatus('');
+    loadLocal(f);
+  };
+
+  /* ===== \u6e05\u7406 ===== */
+  el._cleanup=function(){
+    if(apInstance){try{apInstance.pause();apInstance.destroy()}catch(e){}}
+    apInstance=null;trackList=[];
+  };
+}}

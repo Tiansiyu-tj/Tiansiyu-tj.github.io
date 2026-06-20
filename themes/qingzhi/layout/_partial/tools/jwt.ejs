@@ -1,0 +1,15 @@
+{id:'jwt',name:'JWT 解码',icon:'🎫',cat:'dev',desc:'解析 Header/Payload · 时间转换',
+html(){return'<div class="t-lbl">粘贴 JWT</div><textarea class="t-ta" id="jwtIn" rows="3">eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IuW3peWFt-eosSIsImlhdCI6MTUxNjIzOTAyMn0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c</textarea><button class="t-btn" id="jwtDec" style="margin-top:6px">解码</button><div id="jwtOut" style="margin-top:8px"></div>'},
+init(el){
+  el.querySelector('#jwtDec').onclick=()=>{try{
+    const parts=el.querySelector('#jwtIn').value.trim().split('.');
+    if(parts.length!==3)throw new Error('JWT 应有 3 段');
+    function b64d(s){s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';var bin=atob(s),bytes=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);return new TextDecoder().decode(bytes)}function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}const dec=s=>esc(JSON.stringify(JSON.parse(b64d(s)),null,2));
+    let payload=JSON.parse(b64d(parts[1]));
+    let extra='';
+    if(payload.exp)extra+='\n⏰ 过期: '+new Date(payload.exp*1000).toLocaleString('zh-CN');
+    if(payload.iat)extra+='\n📅 签发: '+new Date(payload.iat*1000).toLocaleString('zh-CN');
+    if(payload.exp){const left=payload.exp*1000-Date.now();extra+='\n'+(left>0?'✅ 剩余 '+Math.floor(left/3600000)+'h '+Math.floor(left%3600000/60000)+'m':'❌ 已过期')}
+    el.querySelector('#jwtOut').innerHTML='<div class="t-lbl">Header</div><pre class="jwt-part jwt-header">'+dec(parts[0])+'</pre><div class="t-lbl">Payload</div><pre class="jwt-part jwt-payload">'+dec(parts[1])+(extra?'\n───'+extra:'')+'</pre><div class="t-lbl">Signature</div><div class="jwt-part jwt-sig">'+parts[2]+'</div>';
+  }catch(e){el.querySelector('#jwtOut').innerHTML='<div class="t-res" style="color:#f56c6c">'+e.message+'</div>'}}
+}}

@@ -1,0 +1,812 @@
+{
+  id: 'eigenvalue',
+  name: '本征值求解',
+  icon: '⚛',
+  cat: 'academic',
+  desc: '1D 薛定谔方程双侧打靶法求解器 — 求本征能量与波函数',
+
+  html: function () {
+    return ''
+      + '<div class="t-row">'
+      +   '<label class="t-lbl">V(x) 表达式</label>'
+      +   '<input id="eigVx" class="t-in" value="0" style="flex:1" placeholder="例: x^2, (x^2-4)^2/4">'
+      + '</div>'
+      + '<div class="t-row">'
+      +   '<label class="t-lbl">区间 a</label>'
+      +   '<input id="eigA" class="t-in" value="0" style="width:80px">'
+      +   '<label class="t-lbl" style="margin-left:12px">b</label>'
+      +   '<input id="eigB" class="t-in" value="1" style="width:80px">'
+      + '</div>'
+      + '<div class="t-row">'
+      +   '<label class="t-lbl">E<sub>min</sub></label>'
+      +   '<input id="eigEmin" class="t-in" value="1" style="width:80px">'
+      +   '<label class="t-lbl" style="margin-left:12px">E<sub>max</sub></label>'
+      +   '<input id="eigEmax" class="t-in" value="200" style="width:80px">'
+      + '</div>'
+      + '<div class="t-row">'
+      +   '<label class="t-lbl">γ = √(2m/ℏ²)</label>'
+      +   '<input id="eigGamma" class="t-in" value="3.14159265" style="width:120px" placeholder="γ 系数">'
+      + '</div>'
+      + '<div class="t-row">'
+      +   '<label class="t-lbl">网格点数 N</label>'
+      +   '<input id="eigN" type="range" min="200" max="2000" step="50" value="500" style="flex:1">'
+      +   '<span id="eigNVal" style="min-width:40px;text-align:right">500</span>'
+      + '</div>'
+      + '<div class="t-row">'
+      +   '<label class="t-lbl">扫描步数</label>'
+      +   '<input id="eigScan" class="t-in" value="500" style="width:80px">'
+      + '</div>'
+      + '<div class="t-row">'
+      +   '<label class="t-lbl">方法</label>'
+      +   '<label style="margin-right:12px"><input type="radio" name="eigMethod" value="numerov" checked> Numerov</label>'
+      +   '<label><input type="radio" name="eigMethod" value="rk4"> RK4</label>'
+      + '</div>'
+      + '<div class="t-row" style="flex-wrap:wrap;gap:6px">'
+      +   '<button class="t-btn t-btn-o" id="eigPre1">无限深方势阱</button>'
+      +   '<button class="t-btn t-btn-o" id="eigPre2">谐振子</button>'
+      +   '<button class="t-btn t-btn-o" id="eigPre3">双势阱</button>'
+      +   '<button class="t-btn t-btn-o" id="eigPre4">Morse 势</button>'
+      +   '<button class="t-btn t-btn-o" id="eigPre5">Lennard-Jones</button>'
+      + '</div>'
+      + '<div class="t-row">'
+      +   '<button class="t-btn" id="eigSolve">求 解</button>'
+      + '</div>'
+      + '<canvas id="eigCv1" class="t-cv" width="600" height="400"></canvas>'
+      + '<canvas id="eigCv2" class="t-cv" width="600" height="260"></canvas>'
+      + '<div id="eigRes" class="t-res"></div>';
+  },
+
+  init: async function (el) {
+
+    /* ── KaTeX + math.js ── */
+    await loadKaTeX();
+    var math = await loadMath();
+
+    /* ── CSS 变量缓存 ── */
+    var cs = getComputedStyle(document.documentElement);
+    var C_ACCENT = cs.getPropertyValue('--accent').trim() || '#5B8BA4';
+    var C_FONT1  = cs.getPropertyValue('--font-color-1').trim() || '#333';
+    var C_FONT3  = cs.getPropertyValue('--font-color-3').trim() || '#999';
+    var C_BG     = cs.getPropertyValue('--background').trim() || '#fff';
+
+    var PALETTE = [C_ACCENT, '#67c23a', '#f56c6c', '#e6a23c', '#9b59b6', '#00bcd4', '#ff5722', '#795548'];
+    var MAX_SHOW = 8;
+
+    /* ── DOM 元素 ── */
+    var inVx     = el.querySelector('#eigVx');
+    var inA      = el.querySelector('#eigA');
+    var inB      = el.querySelector('#eigB');
+    var inEmin   = el.querySelector('#eigEmin');
+    var inEmax   = el.querySelector('#eigEmax');
+    var inGamma  = el.querySelector('#eigGamma');
+    var inN      = el.querySelector('#eigN');
+    var spNVal   = el.querySelector('#eigNVal');
+    var inScan   = el.querySelector('#eigScan');
+    var btnSolve = el.querySelector('#eigSolve');
+    var cv1      = el.querySelector('#eigCv1');
+    var cv2      = el.querySelector('#eigCv2');
+    var divRes   = el.querySelector('#eigRes');
+
+    inN.addEventListener('input', function () { spNVal.textContent = inN.value; });
+
+    /* ── 预设 ── */
+    var presets = [
+      { vx: '0',                       a: '0',   b: '1',  emin: '1',   emax: '200', gamma: '3.14159265' },
+      { vx: 'x^2',                     a: '-5',  b: '5',  emin: '0',   emax: '20',  gamma: '3.16227766' },
+      { vx: '(x^2-4)^2/4',             a: '-4',  b: '4',  emin: '0',   emax: '20',  gamma: '1'          },
+      { vx: '10*(1-exp(-x))^2',        a: '-1',  b: '5',  emin: '0',   emax: '10',  gamma: '1'          },
+      { vx: '4*(x^(-12)-x^(-6))',      a: '0.9', b: '3',  emin: '-1',  emax: '0',   gamma: '1'          }
+    ];
+
+    var activePresetIdx = -1;
+
+    function applyPreset(idx) {
+      var p = presets[idx];
+      inVx.value    = p.vx;
+      inA.value     = p.a;
+      inB.value     = p.b;
+      inEmin.value  = p.emin;
+      inEmax.value  = p.emax;
+      inGamma.value = p.gamma;
+      activePresetIdx = idx;
+      var btns = el.querySelectorAll('[id^="eigPre"]');
+      for (var i = 0; i < btns.length; i++) {
+        if (i === idx) {
+          btns[i].className = 't-btn';
+          btns[i].style.fontWeight = '700';
+        } else {
+          btns[i].className = 't-btn t-btn-o';
+          btns[i].style.fontWeight = '';
+        }
+      }
+    }
+
+    el.querySelector('#eigPre1').addEventListener('click', function () { applyPreset(0); });
+    el.querySelector('#eigPre2').addEventListener('click', function () { applyPreset(1); });
+    el.querySelector('#eigPre3').addEventListener('click', function () { applyPreset(2); });
+    el.querySelector('#eigPre4').addEventListener('click', function () { applyPreset(3); });
+    el.querySelector('#eigPre5').addEventListener('click', function () { applyPreset(4); });
+
+    /* ── 工具函数 ── */
+    function getMethod() {
+      var radios = el.querySelectorAll('input[name="eigMethod"]');
+      for (var i = 0; i < radios.length; i++) {
+        if (radios[i].checked) return radios[i].value;
+      }
+      return 'numerov';
+    }
+
+    function compileV(expr) {
+      var node = math.compile(expr);
+      return function (x) {
+        return node.evaluate({ x: x });
+      };
+    }
+
+    /* ── Numerov 正向积分 ── */
+    function numerovForward(V, a, xEnd, nPts, E, g2) {
+      var h = (xEnd - a) / nPts;
+      var psi = new Array(nPts + 1);
+      psi[0] = 0;
+      psi[1] = 1e-6;
+      for (var i = 1; i < nPts; i++) {
+        var km1 = g2 * (E - V(a + (i - 1) * h));
+        var ki  = g2 * (E - V(a + i * h));
+        var kp1 = g2 * (E - V(a + (i + 1) * h));
+        psi[i + 1] = (2 * (1 - 5 * h * h * ki / 12) * psi[i] - (1 + h * h * km1 / 12) * psi[i - 1]) / (1 + h * h * kp1 / 12);
+      }
+      return psi;
+    }
+
+    /* ── Numerov 反向积分 ── */
+    function numerovBackward(V, xStart, b, nPts, E, g2) {
+      var h = (b - xStart) / nPts;
+      var psi = new Array(nPts + 1);
+      psi[nPts] = 0;
+      psi[nPts - 1] = 1e-6;
+      for (var i = nPts - 1; i > 0; i--) {
+        var kp1 = g2 * (E - V(xStart + (i + 1) * h));
+        var ki  = g2 * (E - V(xStart + i * h));
+        var km1 = g2 * (E - V(xStart + (i - 1) * h));
+        psi[i - 1] = (2 * (1 - 5 * h * h * ki / 12) * psi[i] - (1 + h * h * kp1 / 12) * psi[i + 1]) / (1 + h * h * km1 / 12);
+      }
+      return psi;
+    }
+
+    /* ── RK4 正向积分 ── */
+    function rk4Forward(V, a, xEnd, nPts, E, g2) {
+      var h = (xEnd - a) / nPts;
+      var psi = new Array(nPts + 1);
+      var y = 0;
+      var dy = 1e-6;
+      psi[0] = y;
+      for (var i = 0; i < nPts; i++) {
+        var xi = a + i * h;
+        var k1y  = dy;
+        var k1dy = g2 * (V(xi) - E) * y;
+        var y2   = y + 0.5 * h * k1y;
+        var dy2  = dy + 0.5 * h * k1dy;
+        var k2y  = dy2;
+        var k2dy = g2 * (V(xi + 0.5 * h) - E) * y2;
+        var y3   = y + 0.5 * h * k2y;
+        var dy3  = dy + 0.5 * h * k2dy;
+        var k3y  = dy3;
+        var k3dy = g2 * (V(xi + 0.5 * h) - E) * y3;
+        var y4   = y + h * k3y;
+        var dy4  = dy + h * k3dy;
+        var k4y  = dy4;
+        var k4dy = g2 * (V(xi + h) - E) * y4;
+        y  += h * (k1y  + 2 * k2y  + 2 * k3y  + k4y)  / 6;
+        dy += h * (k1dy + 2 * k2dy + 2 * k3dy + k4dy) / 6;
+        psi[i + 1] = y;
+      }
+      return psi;
+    }
+
+    /* ── RK4 反向积分 ── */
+    function rk4Backward(V, xStart, b, nPts, E, g2) {
+      var h = (b - xStart) / nPts;
+      var psi = new Array(nPts + 1);
+      var y = 0;
+      var dy = -1e-6;
+      psi[nPts] = y;
+      for (var i = nPts; i > 0; i--) {
+        var xi = xStart + i * h;
+        var k1y  = dy;
+        var k1dy = g2 * (V(xi) - E) * y;
+        var y2   = y - 0.5 * h * k1y;
+        var dy2  = dy - 0.5 * h * k1dy;
+        var k2y  = dy2;
+        var k2dy = g2 * (V(xi - 0.5 * h) - E) * y2;
+        var y3   = y - 0.5 * h * k2y;
+        var dy3  = dy - 0.5 * h * k2dy;
+        var k3y  = dy3;
+        var k3dy = g2 * (V(xi - 0.5 * h) - E) * y3;
+        var y4   = y - h * k3y;
+        var dy4  = dy - h * k3dy;
+        var k4y  = dy4;
+        var k4dy = g2 * (V(xi - h) - E) * y4;
+        y  -= h * (k1y  + 2 * k2y  + 2 * k3y  + k4y)  / 6;
+        dy -= h * (k1dy + 2 * k2dy + 2 * k3dy + k4dy) / 6;
+        psi[i - 1] = y;
+      }
+      return psi;
+    }
+
+    /* ── 双侧打靶 (bidirectional shooting) ── */
+    function shootBidirectional(V, a, b, N, E, g2, useNumerov) {
+      var h = (b - a) / N;
+
+      /* 找匹配点：最靠近中间的经典转折点 V(x)≈E */
+      var iMatch = Math.floor(N / 2);
+      var midDist = Infinity;
+      for (var i = 1; i < N; i++) {
+        var vPrev = V(a + (i - 1) * h);
+        var vCurr = V(a + i * h);
+        if ((vPrev - E) * (vCurr - E) < 0) {
+          var dist = Math.abs(i - N / 2);
+          if (dist < midDist) {
+            midDist = dist;
+            iMatch = i;
+          }
+        }
+      }
+
+      /* 确保 iMatch 不在边缘 */
+      if (iMatch < 2) iMatch = 2;
+      if (iMatch > N - 2) iMatch = N - 2;
+
+      var xMatch = a + iMatch * h;
+      var NL = iMatch;
+      var NR = N - iMatch;
+
+      /* 积分 */
+      var psiL, psiR;
+      if (useNumerov) {
+        psiL = numerovForward(V, a, xMatch, NL, E, g2);
+        psiR = numerovBackward(V, xMatch, b, NR, E, g2);
+      } else {
+        psiL = rk4Forward(V, a, xMatch, NL, E, g2);
+        psiR = rk4Backward(V, xMatch, b, NR, E, g2);
+      }
+
+      /* 计算对数导数匹配值 F(E) */
+      var valL = psiL[NL];
+      var valR = psiR[0];
+
+      /* 避免除零 */
+      if (Math.abs(valL) < 1e-30 || Math.abs(valR) < 1e-30) {
+        return { psi: null, F: NaN };
+      }
+
+      var dLogL = (psiL[NL] - psiL[NL - 1]) / (h * psiL[NL]);
+      var dLogR = (psiR[1] - psiR[0]) / (h * psiR[0]);
+      var F = dLogL - dLogR;
+
+      /* 拼合全波函数 */
+      var scale = valL / valR;
+      var psi = new Array(N + 1);
+      for (var i = 0; i <= NL; i++) {
+        psi[i] = psiL[i];
+      }
+      for (var i = 1; i <= NR; i++) {
+        psi[NL + i] = psiR[i] * scale;
+      }
+
+      return { psi: psi, F: F };
+    }
+
+    /* ── 求解主函数 ── */
+    function solve() {
+      var exprStr = inVx.value.trim();
+      var a     = parseFloat(inA.value);
+      var b     = parseFloat(inB.value);
+      var Emin  = parseFloat(inEmin.value);
+      var Emax  = parseFloat(inEmax.value);
+      var gamma = parseFloat(inGamma.value);
+      var N     = parseInt(inN.value, 10);
+      var nScan = parseInt(inScan.value, 10) || 500;
+      var method = getMethod();
+
+      if (isNaN(a) || isNaN(b) || a >= b) {
+        divRes.innerHTML = '<span style="color:#f56c6c">区间参数无效</span>';
+        return;
+      }
+      if (isNaN(Emin) || isNaN(Emax) || Emin >= Emax) {
+        divRes.innerHTML = '<span style="color:#f56c6c">能量范围无效</span>';
+        return;
+      }
+      if (isNaN(gamma) || gamma <= 0) {
+        divRes.innerHTML = '<span style="color:#f56c6c">γ 参数无效（需为正数）</span>';
+        return;
+      }
+
+      var V;
+      try {
+        V = compileV(exprStr);
+        V(a);
+        V(b);
+        V((a + b) / 2);
+      } catch (e) {
+        divRes.innerHTML = '<span style="color:#f56c6c">V(x) 表达式错误: ' + e.message + '</span>';
+        return;
+      }
+
+      var g2 = gamma * gamma;
+      var useNumerov = (method === 'numerov');
+
+      /* ── 扫描 F(E) ── */
+      var dE = (Emax - Emin) / nScan;
+      var scanE = [];
+      var scanF = [];
+      var prevF = null;
+      var signChanges = [];
+
+      for (var s = 0; s <= nScan; s++) {
+        var E = Emin + s * dE;
+        var result = shootBidirectional(V, a, b, N, E, g2, useNumerov);
+        var Fval = result.F;
+
+        scanE.push(E);
+        scanF.push(isFinite(Fval) ? Fval : null);
+
+        if (prevF !== null && isFinite(Fval) && isFinite(prevF) && prevF * Fval < 0) {
+          signChanges.push([E - dE, E]);
+        }
+        if (isFinite(Fval)) prevF = Fval;
+      }
+
+      /* ── 二分法精确求解 ── */
+      var eigenvalues = [];
+      var eigenfunctions = [];
+
+      for (var sc = 0; sc < signChanges.length && eigenvalues.length < MAX_SHOW; sc++) {
+        var Eleft  = signChanges[sc][0];
+        var Eright = signChanges[sc][1];
+
+        var fL = shootBidirectional(V, a, b, N, Eleft,  g2, useNumerov).F;
+        var fR = shootBidirectional(V, a, b, N, Eright, g2, useNumerov).F;
+
+        if (!isFinite(fL) || !isFinite(fR)) continue;
+
+        for (var bisect = 0; bisect < 60; bisect++) {
+          var Emid = (Eleft + Eright) / 2;
+          var fM = shootBidirectional(V, a, b, N, Emid, g2, useNumerov).F;
+          if (!isFinite(fM)) break;
+          if (fL * fM < 0) {
+            Eright = Emid;
+            fR = fM;
+          } else {
+            Eleft = Emid;
+            fL = fM;
+          }
+          if (Math.abs(Eright - Eleft) < 1e-12) break;
+        }
+
+        var Efound = (Eleft + Eright) / 2;
+        var resFound = shootBidirectional(V, a, b, N, Efound, g2, useNumerov);
+
+        if (!resFound.psi) continue;
+
+        var psiFound = resFound.psi;
+
+        /* 梯形法归一化 */
+        var hStep = (b - a) / N;
+        var norm2 = 0;
+        for (var j = 0; j < N; j++) {
+          norm2 += (psiFound[j] * psiFound[j] + psiFound[j + 1] * psiFound[j + 1]) * hStep / 2;
+        }
+        var normFactor = Math.sqrt(norm2);
+        if (normFactor > 0) {
+          for (var j = 0; j <= N; j++) {
+            psiFound[j] /= normFactor;
+          }
+        }
+
+        eigenvalues.push(Efound);
+        eigenfunctions.push(psiFound);
+      }
+
+      /* ── 计算节点数 ── */
+      var nodeCounts = [];
+      for (var ei = 0; ei < eigenfunctions.length; ei++) {
+        var nodes = 0;
+        var pf = eigenfunctions[ei];
+        for (var j = 1; j < pf.length; j++) {
+          if (pf[j - 1] * pf[j] < 0) nodes++;
+        }
+        nodeCounts.push(nodes);
+      }
+
+      /* ── 绘制 ── */
+      drawPotentialAndWavefunctions(V, a, b, N, eigenvalues, eigenfunctions, g2);
+      drawScanCurve(scanE, scanF, eigenvalues);
+
+      /* ── 解析值对比 ── */
+      var hasAnalytic = false;
+      var analyticVals = [];
+      var analyticLabel = '';
+
+      if (activePresetIdx === 0) {
+        /* 无限深方势阱: E_n = n²π² / γ² (当 γ=π 时 E_n=n²) */
+        hasAnalytic = true;
+        analyticLabel = 'n^2\\pi^2/\\gamma^2';
+        for (var i = 0; i < eigenvalues.length; i++) {
+          var n = i + 1;
+          analyticVals.push(n * n * Math.PI * Math.PI / g2);
+        }
+      } else if (activePresetIdx === 1) {
+        /* 谐振子: E_n = (2n-1)/γ */
+        hasAnalytic = true;
+        analyticLabel = '(2n-1)/\\gamma';
+        for (var i = 0; i < eigenvalues.length; i++) {
+          var n = i + 1;
+          analyticVals.push((2 * n - 1) / gamma);
+        }
+      }
+
+      /* ── 结果表格 ── */
+      if (eigenvalues.length === 0) {
+        divRes.innerHTML = '<span style="color:#e6a23c">未找到本征值，尝试调整能量范围或增加扫描步数</span>';
+      } else {
+        var html = '<b>找到 ' + eigenvalues.length + ' 个本征值</b>'
+          + '&ensp;<span style="font-size:12px;color:' + C_FONT3 + '">(方法: ' + method.toUpperCase() + ', γ = ' + gamma.toFixed(6) + ', γ² = ' + g2.toFixed(6) + ')</span><br>'
+          + '<table style="width:100%;border-collapse:collapse;margin-top:8px;font-size:13px">'
+          + '<tr style="border-bottom:1px solid ' + C_FONT3 + '">'
+          + '<th style="text-align:left;padding:4px">n</th>'
+          + '<th style="text-align:left;padding:4px">' + tex('E_n') + ' (数值)</th>'
+          + '<th style="text-align:left;padding:4px">节点</th>';
+        if (hasAnalytic) {
+          html += '<th style="text-align:left;padding:4px">' + tex(analyticLabel) + '</th>';
+          html += '<th style="text-align:left;padding:4px">相对误差</th>';
+        }
+        html += '</tr>';
+
+        for (var i = 0; i < eigenvalues.length; i++) {
+          var color = PALETTE[i % PALETTE.length];
+          html += '<tr>'
+            + '<td style="padding:4px;color:' + color + '"><b>' + tex('E_{' + (i + 1) + '}') + '</b></td>'
+            + '<td style="padding:4px">' + eigenvalues[i].toFixed(8) + '</td>'
+            + '<td style="padding:4px">' + nodeCounts[i] + '</td>';
+          if (hasAnalytic) {
+            var exact = analyticVals[i];
+            var relErr = Math.abs(exact) > 1e-15 ? Math.abs(eigenvalues[i] - exact) / Math.abs(exact) : 0;
+            html += '<td style="padding:4px">' + exact.toFixed(8) + '</td>';
+            html += '<td style="padding:4px">' + relErr.toExponential(2) + '</td>';
+          }
+          html += '</tr>';
+        }
+        html += '</table>';
+
+        if (hasAnalytic) {
+          html += '<div style="margin-top:6px;font-size:12px;color:' + C_FONT3 + '">解析: '
+            + tex('E_n = ' + analyticLabel) + '</div>';
+        }
+
+        divRes.innerHTML = html;
+      }
+    }
+
+    /* ── Canvas 绘制: 势能 + 波函数 ── */
+    function drawPotentialAndWavefunctions(V, a, b, N, eigenvalues, eigenfunctions, g2) {
+      var dpr = window.devicePixelRatio || 1;
+      var W = cv1.clientWidth || 600;
+      var H = cv1.clientHeight || 400;
+      cv1.width = W * dpr;
+      cv1.height = H * dpr;
+      var ctx = cv1.getContext('2d');
+      ctx.scale(dpr, dpr);
+
+      var pad = { top: 20, right: 20, bottom: 40, left: 50 };
+      var pw = W - pad.left - pad.right;
+      var ph = H - pad.top - pad.bottom;
+
+      ctx.clearRect(0, 0, W, H);
+
+      var h = (b - a) / N;
+
+      /* 计算 V(x) 数据 */
+      var vData = [];
+      for (var i = 0; i <= N; i++) {
+        var x = a + i * h;
+        var v;
+        try { v = V(x); } catch (e) { v = 0; }
+        vData.push(v);
+      }
+
+      /* 确定 Y 轴范围 */
+      var yMin = Infinity, yMax = -Infinity;
+      for (var i = 0; i < vData.length; i++) {
+        if (isFinite(vData[i])) {
+          if (vData[i] < yMin) yMin = vData[i];
+          if (vData[i] > yMax) yMax = vData[i];
+        }
+      }
+      for (var i = 0; i < eigenvalues.length; i++) {
+        if (eigenvalues[i] < yMin) yMin = eigenvalues[i];
+        if (eigenvalues[i] > yMax) yMax = eigenvalues[i];
+      }
+
+      /* 波函数幅度 → 扩展 Y 范围 */
+      var maxPsiAmp = 0;
+      for (var ei = 0; ei < eigenfunctions.length; ei++) {
+        for (var j = 0; j <= N; j++) {
+          var amp = Math.abs(eigenfunctions[ei][j]);
+          if (amp > maxPsiAmp) maxPsiAmp = amp;
+        }
+      }
+
+      var Espan = (eigenvalues.length > 1)
+        ? (eigenvalues[eigenvalues.length - 1] - eigenvalues[0])
+        : (yMax - yMin) || 1;
+      var psiScale = Espan * 0.15 / (maxPsiAmp || 1);
+
+      var margin = (yMax - yMin) * 0.15 || 1;
+      yMin -= margin;
+      yMax += margin + Espan * 0.2;
+
+      function mapX(x) { return pad.left + (x - a) / (b - a) * pw; }
+      function mapY(y) { return pad.top + ph - (y - yMin) / (yMax - yMin) * ph; }
+
+      /* 坐标轴 */
+      ctx.strokeStyle = C_FONT3;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(pad.left, pad.top);
+      ctx.lineTo(pad.left, pad.top + ph);
+      ctx.lineTo(pad.left + pw, pad.top + ph);
+      ctx.stroke();
+
+      /* X 轴刻度 */
+      ctx.fillStyle = C_FONT3;
+      ctx.font = '11px sans-serif';
+      ctx.textAlign = 'center';
+      var nTickX = 6;
+      for (var t = 0; t <= nTickX; t++) {
+        var xv = a + (b - a) * t / nTickX;
+        var sx = mapX(xv);
+        ctx.beginPath();
+        ctx.moveTo(sx, pad.top + ph);
+        ctx.lineTo(sx, pad.top + ph + 4);
+        ctx.stroke();
+        ctx.fillText(xv.toFixed(2), sx, pad.top + ph + 16);
+      }
+      ctx.fillText('x', pad.left + pw / 2, H - 4);
+
+      /* Y 轴刻度 */
+      ctx.textAlign = 'right';
+      var nTickY = 5;
+      for (var t = 0; t <= nTickY; t++) {
+        var yv = yMin + (yMax - yMin) * t / nTickY;
+        var sy = mapY(yv);
+        ctx.beginPath();
+        ctx.moveTo(pad.left - 4, sy);
+        ctx.lineTo(pad.left, sy);
+        ctx.stroke();
+        ctx.fillText(yv.toFixed(1), pad.left - 6, sy + 4);
+      }
+      ctx.save();
+      ctx.translate(12, pad.top + ph / 2);
+      ctx.rotate(-Math.PI / 2);
+      ctx.textAlign = 'center';
+      ctx.fillText('E / V(x)', 0, 0);
+      ctx.restore();
+
+      /* V(x) 填充 */
+      ctx.beginPath();
+      for (var i = 0; i <= N; i++) {
+        var x = a + i * h;
+        var v = isFinite(vData[i]) ? vData[i] : 0;
+        var clipped = Math.max(yMin, Math.min(yMax, v));
+        if (i === 0) ctx.moveTo(mapX(x), mapY(clipped));
+        else ctx.lineTo(mapX(x), mapY(clipped));
+      }
+      ctx.lineTo(mapX(b), mapY(yMin));
+      ctx.lineTo(mapX(a), mapY(yMin));
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(150,150,150,0.15)';
+      ctx.fill();
+
+      /* V(x) 曲线 */
+      ctx.beginPath();
+      for (var i = 0; i <= N; i++) {
+        var x = a + i * h;
+        var v = isFinite(vData[i]) ? vData[i] : 0;
+        var clipped = Math.max(yMin, Math.min(yMax, v));
+        if (i === 0) ctx.moveTo(mapX(x), mapY(clipped));
+        else ctx.lineTo(mapX(x), mapY(clipped));
+      }
+      ctx.strokeStyle = C_FONT3;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      /* 本征能级线 + 波函数 */
+      for (var ei = 0; ei < eigenvalues.length; ei++) {
+        var E = eigenvalues[ei];
+        var color = PALETTE[ei % PALETTE.length];
+        var psi = eigenfunctions[ei];
+
+        /* 能级水平线 (虚线) */
+        ctx.save();
+        ctx.setLineDash([4, 4]);
+        ctx.strokeStyle = color;
+        ctx.globalAlpha = 0.5;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(mapX(a), mapY(E));
+        ctx.lineTo(mapX(b), mapY(E));
+        ctx.stroke();
+        ctx.restore();
+
+        /* 能级标注 */
+        ctx.fillStyle = color;
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText('E' + (ei + 1), mapX(b) + 4, mapY(E) + 4);
+
+        /* 波函数 (偏移到能级处) */
+        ctx.beginPath();
+        for (var j = 0; j <= N; j++) {
+          var x = a + j * h;
+          var yVal = E + psi[j] * psiScale;
+          var px = mapX(x);
+          var py = mapY(yVal);
+          if (j === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+    }
+
+    /* ── Canvas 绘制: F(E) 扫描曲线 ── */
+    function drawScanCurve(scanE, scanF, eigenvalues) {
+      var dpr = window.devicePixelRatio || 1;
+      var W = cv2.clientWidth || 600;
+      var H = cv2.clientHeight || 260;
+      cv2.width = W * dpr;
+      cv2.height = H * dpr;
+      var ctx = cv2.getContext('2d');
+      ctx.scale(dpr, dpr);
+
+      var pad = { top: 16, right: 20, bottom: 40, left: 60 };
+      var pw = W - pad.left - pad.right;
+      var ph = H - pad.top - pad.bottom;
+
+      ctx.clearRect(0, 0, W, H);
+
+      if (scanE.length === 0) return;
+
+      var eMin = scanE[0], eMax = scanE[scanE.length - 1];
+
+      /* 自动 Y 范围 (截断极端值) */
+      var finiteFvals = [];
+      for (var i = 0; i < scanF.length; i++) {
+        if (scanF[i] !== null && isFinite(scanF[i])) finiteFvals.push(scanF[i]);
+      }
+      if (finiteFvals.length === 0) return;
+
+      finiteFvals.sort(function (x, y) { return x - y; });
+      var lo = finiteFvals[Math.floor(finiteFvals.length * 0.05)] || -1;
+      var hi = finiteFvals[Math.floor(finiteFvals.length * 0.95)] || 1;
+      var yRange = hi - lo || 1;
+      var yMin = lo - yRange * 0.15;
+      var yMax = hi + yRange * 0.15;
+
+      function mapX(e) { return pad.left + (e - eMin) / (eMax - eMin) * pw; }
+      function mapY(v) { return pad.top + ph - (v - yMin) / (yMax - yMin) * ph; }
+
+      /* 坐标轴 */
+      ctx.strokeStyle = C_FONT3;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(pad.left, pad.top);
+      ctx.lineTo(pad.left, pad.top + ph);
+      ctx.lineTo(pad.left + pw, pad.top + ph);
+      ctx.stroke();
+
+      /* 零线 */
+      if (yMin < 0 && yMax > 0) {
+        ctx.save();
+        ctx.setLineDash([3, 3]);
+        ctx.strokeStyle = C_FONT3;
+        ctx.globalAlpha = 0.5;
+        ctx.beginPath();
+        ctx.moveTo(pad.left, mapY(0));
+        ctx.lineTo(pad.left + pw, mapY(0));
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      /* X 轴刻度 */
+      ctx.fillStyle = C_FONT3;
+      ctx.font = '11px sans-serif';
+      ctx.textAlign = 'center';
+      var nTickX = 6;
+      for (var t = 0; t <= nTickX; t++) {
+        var ev = eMin + (eMax - eMin) * t / nTickX;
+        var sx = mapX(ev);
+        ctx.beginPath();
+        ctx.moveTo(sx, pad.top + ph);
+        ctx.lineTo(sx, pad.top + ph + 4);
+        ctx.stroke();
+        ctx.fillText(ev.toFixed(1), sx, pad.top + ph + 16);
+      }
+      ctx.fillText('E', pad.left + pw / 2, H - 4);
+
+      /* Y 轴标签 */
+      ctx.save();
+      ctx.translate(14, pad.top + ph / 2);
+      ctx.rotate(-Math.PI / 2);
+      ctx.textAlign = 'center';
+      ctx.fillText('F(E)', 0, 0);
+      ctx.restore();
+
+      /* Y 轴刻度 */
+      ctx.textAlign = 'right';
+      var nTickY = 4;
+      for (var t = 0; t <= nTickY; t++) {
+        var yv = yMin + (yMax - yMin) * t / nTickY;
+        var sy = mapY(yv);
+        ctx.beginPath();
+        ctx.moveTo(pad.left - 4, sy);
+        ctx.lineTo(pad.left, sy);
+        ctx.stroke();
+        ctx.fillText(yv.toExponential(1), pad.left - 6, sy + 4);
+      }
+
+      /* F(E) 曲线 */
+      ctx.beginPath();
+      var started = false;
+      for (var i = 0; i < scanE.length; i++) {
+        var v = scanF[i];
+        if (v === null || !isFinite(v)) { started = false; continue; }
+        var clipped = Math.max(yMin, Math.min(yMax, v));
+        var px = mapX(scanE[i]);
+        var py = mapY(clipped);
+        if (!started) { ctx.moveTo(px, py); started = true; }
+        else ctx.lineTo(px, py);
+      }
+      ctx.strokeStyle = C_ACCENT;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      /* 本征值标记 */
+      for (var i = 0; i < eigenvalues.length; i++) {
+        var ex = mapX(eigenvalues[i]);
+        var ey = mapY(0);
+        var color = PALETTE[i % PALETTE.length];
+
+        /* 垂直辅助线 */
+        ctx.save();
+        ctx.setLineDash([2, 3]);
+        ctx.strokeStyle = color;
+        ctx.globalAlpha = 0.4;
+        ctx.beginPath();
+        ctx.moveTo(ex, pad.top);
+        ctx.lineTo(ex, pad.top + ph);
+        ctx.stroke();
+        ctx.restore();
+
+        /* 标记点 */
+        ctx.beginPath();
+        ctx.arc(ex, ey, 4, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.fill();
+        ctx.strokeStyle = C_BG;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+    }
+
+    /* ── 事件绑定 ── */
+    btnSolve.addEventListener('click', function () {
+      try {
+        solve();
+      } catch (e) {
+        divRes.innerHTML = '<span style="color:#f56c6c">计算错误: ' + e.message + '</span>';
+      }
+    });
+  }
+}

@@ -1,0 +1,37 @@
+<a class="browse-back" href="/categories/">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+  全部分类
+</a>
+
+<%
+var pageCategoriesName = path.substring("categories/".length, path.indexOf("/index.html"));
+var categoriesHashmap = new HashMap();
+var allPostArray = site.posts.data;
+for (var i = 0; i < allPostArray.length; i++) {
+  var postTemp = allPostArray[i];
+  var postTempCategory = postTemp.categories.data;
+  for (var j = 0; j < postTempCategory.length; j++) {
+    if (!categoriesHashmap.containsKey(postTempCategory[j].name)) {
+      categoriesHashmap.put(postTempCategory[j].name, [postTemp]);
+    } else {
+      categoriesHashmap.get(postTempCategory[j].name).push(postTemp);
+    }
+  }
+}
+var array = categoriesHashmap.containsKey(pageCategoriesName) ? categoriesHashmap.get(pageCategoriesName) : [];
+if (Array.isArray(array)) {
+  array.sort(function(a, b) { return b.date - a.date; });
+}
+var visiblePosts = array.filter(function(p) { return !('hide' in p) || p.hide === false; });
+%>
+
+<div class="subpage-title">🔖 <i><%= pageCategoriesName %></i></div>
+
+<div class="subpage-list">
+  <% for (var i = 0; i < visiblePosts.length; i++) { var p = visiblePosts[i]; %>
+    <a class="subpage-item" href="<%- url_for(p.path) %>">
+      <span class="subpage-date"><%= date(p.date, "YYYY-MM-DD") %></span>
+      <span class="subpage-name"><%= p.title %></span>
+    </a>
+  <% } %>
+</div>

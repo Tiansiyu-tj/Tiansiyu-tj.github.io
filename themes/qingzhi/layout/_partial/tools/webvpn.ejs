@@ -1,0 +1,79 @@
+{id:'webvpn',name:'WebVPN 转换',icon:'🔗',cat:'campus',desc:'内网地址 ↔ WebVPN 地址',
+html(){return'<div style="font-size:.75em;color:#888;margin-bottom:10px">🔒 AES-128-CFB 加密 · 纯客户端 · 密钥 <code>wrdvpnisthebest!</code></div><div class="t-lbl">🌐 原始 URL（校内网址）</div><textarea class="t-ta" id="vpnIn" rows="2" placeholder="https://ehall.xjtu.edu.cn/xxx 或 http://dean.xjtu.edu.cn/xxx" style="min-height:50px"></textarea><div class="t-row" style="justify-content:center;margin:10px 0"><button class="t-btn t-btn-s" id="vpnEnc">🔒 加密 → WebVPN</button><button class="t-btn" id="vpnDec">🔓 解密 → 原始</button></div><div class="t-lbl">🛡️ WebVPN URL</div><textarea class="t-ta" id="vpnOut" rows="2" placeholder="https://webvpn.xjtu.edu.cn/..." style="min-height:50px"></textarea><div class="t-row" style="justify-content:center;margin-top:8px"><button class="t-btn t-btn-o" id="vpnCopy" style="font-size:.75em">📋 复制结果</button></div><div id="vpnMsg" style="text-align:center;margin-top:6px;font-size:.78em;color:#888"></div>'},
+init(el){
+  var KEY=[0x77,0x72,0x64,0x76,0x70,0x6e,0x69,0x73,0x74,0x68,0x65,0x62,0x65,0x73,0x74,0x21];
+  var IV=KEY.slice();
+  var HOST='webvpn.xjtu.edu.cn';
+  function hex(b){var s='';for(var i=0;i<b.length;i++)s+=('0'+b[i].toString(16)).slice(-2);return s}
+  function unhex(s){var a=[];for(var i=0;i<s.length;i+=2)a.push(parseInt(s.substr(i,2),16));return a}
+  function aesBlock(key){
+    var Sbox=[99,124,119,123,242,107,111,197,48,1,103,43,254,215,171,118,202,130,201,125,250,89,71,240,173,212,162,175,156,164,114,192,183,253,147,38,54,63,247,204,52,165,229,241,113,216,49,21,4,199,35,195,24,150,5,154,7,18,128,226,235,39,178,117,9,131,44,26,27,110,90,160,82,59,214,179,41,227,47,132,83,209,0,237,32,252,177,91,106,203,190,57,74,76,88,207,208,239,170,251,67,77,51,133,69,249,2,127,80,60,159,168,81,163,64,143,146,157,56,245,188,182,218,33,16,255,243,210,205,12,19,236,95,151,68,23,196,167,126,61,100,93,25,115,96,129,79,220,34,42,144,136,70,238,184,20,222,94,11,219,224,50,58,10,73,6,36,92,194,211,172,98,145,149,228,121,231,200,55,109,141,213,78,169,108,86,244,234,101,122,174,8,186,120,37,46,28,166,180,198,232,221,116,31,75,189,139,138,112,62,181,102,72,3,246,14,97,53,87,185,134,193,29,158,225,248,152,17,105,217,142,148,155,30,135,233,206,85,40,223,140,161,137,13,191,230,66,104,65,153,45,15,176,84,187,22];
+    var Rcon=[1,2,4,8,16,32,64,128,27,54];
+    function subWord(w){return(Sbox[(w>>>24)&255]<<24)|(Sbox[(w>>>16)&255]<<16)|(Sbox[(w>>>8)&255]<<8)|Sbox[w&255]}
+    function rotWord(w){return((w<<8)|(w>>>24))>>>0}
+    var Nk=4,Nr=10,w=new Array(44);
+    for(var i=0;i<Nk;i++)w[i]=((key[4*i]<<24)|(key[4*i+1]<<16)|(key[4*i+2]<<8)|key[4*i+3])>>>0;
+    for(var i=Nk;i<4*(Nr+1);i++){var t=w[i-1];if(i%Nk===0)t=subWord(rotWord(t))^((Rcon[i/Nk-1]<<24)>>>0);w[i]=(w[i-Nk]^t)>>>0}
+    function subBytes(s){for(var i=0;i<16;i++)s[i]=Sbox[s[i]]}
+    function shiftRows(s){var t=s[1];s[1]=s[5];s[5]=s[9];s[9]=s[13];s[13]=t;t=s[2];s[2]=s[10];s[10]=t;t=s[6];s[6]=s[14];s[14]=t;t=s[3];s[3]=s[15];s[15]=s[11];s[11]=s[7];s[7]=t}
+    function xtime(a){return((a<<1)^(a&128?0x1b:0))&255}
+    function mixCol(s){for(var c=0;c<4;c++){var i=4*c,a=s[i],b=s[i+1],cx=s[i+2],d=s[i+3];s[i]=xtime(a^b)^b^cx^d;s[i+1]=xtime(b^cx)^cx^d^a;s[i+2]=xtime(cx^d)^d^a^b;s[i+3]=xtime(d^a)^a^b^cx}}
+    function addRoundKey(s,r){for(var i=0;i<4;i++){var ww=w[r*4+i];s[4*i]^=(ww>>>24)&255;s[4*i+1]^=(ww>>>16)&255;s[4*i+2]^=(ww>>>8)&255;s[4*i+3]^=ww&255}}
+    return function(block){var s=block.slice();addRoundKey(s,0);for(var r=1;r<Nr;r++){subBytes(s);shiftRows(s);mixCol(s);addRoundKey(s,r)}subBytes(s);shiftRows(s);addRoundKey(s,Nr);return s}
+  }
+  var encrypt=aesBlock(KEY);
+  function cfbEncrypt(plain){
+    var out=[];var fb=IV.slice();
+    for(var i=0;i<plain.length;i+=16){
+      var enc=encrypt(fb);
+      var chunk=[];
+      for(var j=0;j<16&&i+j<plain.length;j++){var c=plain[i+j]^enc[j];chunk.push(c);out.push(c)}
+      fb=chunk.slice();while(fb.length<16)fb.push(0);
+    }
+    return out
+  }
+  function cfbDecrypt(cipher){
+    var out=[];var fb=IV.slice();
+    for(var i=0;i<cipher.length;i+=16){
+      var enc=encrypt(fb);
+      var chunk=cipher.slice(i,i+16);
+      for(var j=0;j<chunk.length;j++)out.push(chunk[j]^enc[j]);
+      fb=chunk.slice();while(fb.length<16)fb.push(0);
+    }
+    return out
+  }
+  function utf8Encode(s){var a=[];for(var i=0;i<s.length;i++){var c=s.charCodeAt(i);if(c<128)a.push(c);else if(c<2048){a.push(192|(c>>6));a.push(128|(c&63))}else if(c>=0xD800&&c<=0xDBFF){var hi=c,lo=s.charCodeAt(++i);var cp=0x10000+((hi-0xD800)<<10)+(lo-0xDC00);a.push(240|(cp>>18));a.push(128|((cp>>12)&63));a.push(128|((cp>>6)&63));a.push(128|(cp&63))}else{a.push(224|(c>>12));a.push(128|((c>>6)&63));a.push(128|(c&63))}}return a}
+  function utf8Decode(a){var s='';for(var i=0;i<a.length;){var c=a[i];if(c<128){s+=String.fromCharCode(c);i++}else if(c<224){s+=String.fromCharCode(((c&31)<<6)|(a[i+1]&63));i+=2}else if(c<240){s+=String.fromCharCode(((c&15)<<12)|((a[i+1]&63)<<6)|(a[i+2]&63));i+=3}else{var cp=((c&7)<<18)|((a[i+1]&63)<<12)|((a[i+2]&63)<<6)|(a[i+3]&63);s+=String.fromCodePoint(cp);i+=4}}return s}
+  var msg=el.querySelector('#vpnMsg');
+  el.querySelector('#vpnEnc').onclick=function(){
+    var url=el.querySelector('#vpnIn').value.trim();if(!url){msg.textContent='请输入原始 URL';return}
+    try{
+      var parts=url.split('://');if(parts.length<2){msg.textContent='请输入完整 URL（含 http:// 或 https://）';return}
+      var pro=parts[0],rest=parts.slice(1).join('://');
+      var segs=rest.split('/'),hostPort=segs[0],path=segs.slice(1).join('/');
+      var hp=hostPort.split(':'),domain=hp[0],port=hp.length>1?'-'+hp[1]:'';
+      var plainBytes=utf8Encode(domain);
+      var cipherBytes=cfbEncrypt(plainBytes);
+      var ivHex=hex(IV),cipherHex=hex(cipherBytes);
+      var result='https://'+HOST+'/'+pro+port+'/'+ivHex+cipherHex+(path?'/'+path:'');
+      el.querySelector('#vpnOut').value=result;
+      msg.textContent='✅ 转换成功';msg.style.color='#67c23a';
+    }catch(e){msg.textContent='❌ '+e.message;msg.style.color='#f56c6c'}
+  };
+  el.querySelector('#vpnDec').onclick=function(){
+    var url=el.querySelector('#vpnOut').value.trim();if(!url){msg.textContent='请输入 WebVPN URL';return}
+    try{
+      var parts=url.split('/');if(parts.length<5){msg.textContent='WebVPN URL 格式不正确';return}
+      var pro=parts[3],keyCipher=parts[4],path=parts.slice(5).join('/');
+      var port='';if(pro.indexOf('-')>0){var pp=pro.split('-');pro=pp[0];port=':'+pp[1]}
+      var cipherHex=keyCipher.substring(32);
+      var cipherBytes=unhex(cipherHex);
+      var plainBytes=cfbDecrypt(cipherBytes);
+      var domain=utf8Decode(plainBytes);
+      var result=pro+'://'+domain+port+(path?'/'+path:'');
+      el.querySelector('#vpnIn').value=result;
+      msg.textContent='✅ 解密成功';msg.style.color='#67c23a';
+    }catch(e){msg.textContent='❌ '+e.message;msg.style.color='#f56c6c'}
+  };
+  el.querySelector('#vpnCopy').onclick=function(){var t=el.querySelector('#vpnOut').value||el.querySelector('#vpnIn').value;if(t)navigator.clipboard.writeText(t).then(function(){el.querySelector('#vpnCopy').textContent='✓ 已复制';setTimeout(function(){el.querySelector('#vpnCopy').textContent='📋 复制结果'},1500)})};
+}}

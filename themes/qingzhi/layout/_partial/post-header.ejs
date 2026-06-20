@@ -1,0 +1,40 @@
+
+<% if(is_post() && ('words' in page) && page.words != null) {%>
+    <div class="index-header-line" >
+        <div id="hiddenHeaderContentArray" style="display: none;">
+            <% var headerContentArray = page.words %>
+            <% var headerContentArrayLength = headerContentArray.length %>
+            <% for(let i = 0; i < headerContentArrayLength; i++) { %>
+                <span><%= page.words[i] %></span>
+            <% } %>
+        </div>
+        <span id="targetSpan"></span>
+    </div>
+<% } %>
+
+<div class="header">
+    <div class="header-container">
+        <img 
+            alt="^-^" 
+            cache-control="max-age=86400" 
+            class="header-img" 
+            src="<%- url_for(theme.favicon) %>"
+            width="48"
+            height="48"
+        />
+        <div class="header-content">
+            <a class="logo" href="<%- url_for() %>"><%= config.title %></a> 
+            <span class="description"><%= config.description %></span> 
+        </div>
+    </div>
+    
+    <nav class="site-nav">
+        <% for (name in theme.menu) { %>
+            <% if(theme.menu[name].substring(1, theme.menu[name].length - 1) == path.substring(0, path.indexOf("/"))) { %>
+                <a class="site-nav-item is-active" href="<%- url_for(theme.menu[name]) %>"><%= name %></a>
+            <%} else {%>
+                <a class="site-nav-item" href="<%- url_for(theme.menu[name]) %>"><%= name %></a>
+            <% } %>
+        <% } %>
+    </nav>
+</div>

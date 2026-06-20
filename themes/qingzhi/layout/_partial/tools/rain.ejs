@@ -1,0 +1,55 @@
+{id:'rain',name:'代码雨',icon:'🌧️',cat:'fun',desc:'10 种主题 · 速度/字号可调 · 全屏',
+html(){return'<div class="t-row" style="flex-wrap:wrap;gap:6px;justify-content:center"><span class="t-lbl">主题</span><select class="t-in" id="rainTheme" style="width:auto"><option value="matrix">🟢 经典 Matrix</option><option value="cyber">🔵 赛博朋克</option><option value="fire">🔴 数字烈焰</option><option value="gold">🟡 黄金矩阵</option><option value="sakura">🌸 樱花飘落</option><option value="panda">🐼 熊猫烧香</option><option value="ai">🤖 AI 神经</option><option value="virus">☣️ 高级病毒</option><option value="binary">💾 纯二进制</option><option value="rainbow">🌈 RGB 彩虹</option></select></div><div class="t-row" style="flex-wrap:wrap;gap:6px;justify-content:center"><span class="t-lbl">速度</span><input type="range" id="rainSpd" min="10" max="120" value="60" style="width:80px"><span class="t-lbl">字号</span><input type="range" id="rainFS" min="10" max="24" value="14" style="width:60px"></div><div class="t-row" style="justify-content:center;gap:8px"><button class="t-btn t-btn-s" id="rainToggle">▶ 开始</button><button class="t-btn t-btn-d" id="rainFull">⛶ 全屏</button></div><canvas id="rainCvs" style="width:100%;height:260px;background:#0a0a0a;border-radius:6px;display:block"></canvas>'},
+init(el){
+  const cvs=el.querySelector('#rainCvs'),ctx=cvs.getContext('2d');
+  let raf=null,running=false,cols,drops,hue=0;
+  const themes={
+    matrix:{bg:'rgba(0,0,0,0.05)',chars:'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ0123456789',fg(i,h){return'#0f0'}},
+    cyber:{bg:'rgba(0,0,20,0.06)',chars:'01<>{}[]|/\\+=_-*&^%λΔΩψ◊◆□■',fg(i,h){return`hsl(${190+Math.sin(i*0.1)*20},100%,60%)`}},
+    fire:{bg:'rgba(0,0,0,0.04)',chars:['♨️','🔥','❤️‍🔥','💥','火','焰','炎','灼','烧','0','1'],fg(i,h){return`hsl(${Math.max(0,30-i*0.5)},100%,55%)`}},
+    gold:{bg:'rgba(0,0,0,0.05)',chars:'$¥€£₿₹₩₽01234金银财富',fg(i,h){return`hsl(${45+Math.sin(i*0.08)*10},100%,55%)`}},
+    sakura:{bg:'rgba(0,0,0,0.03)',chars:'🌸🌺🌷💮✿❀花春桜梅風雪',fg(i,h){return`hsl(${330+Math.sin(i*0.1)*15},80%,72%)`}},
+    panda:{bg:'rgba(0,0,0,0.05)',chars:'TROJAN.EXE WORM.DLL INFECT COPY DELETE CORRUPT FORMAT',fg(i,h){return i%7===0?'#f00':'#aaa'}},
+    ai:{bg:'rgba(0,0,10,0.05)',chars:'⬡◇◈⬢△▽○●◐◑⊕⊗∞≈∇∂∫∑∏λσπ',fg(i,h){return`hsl(${220+Math.sin(h*0.02+i*0.05)*40},90%,65%)`}},
+    virus:{bg:'rgba(10,0,0,0.04)',chars:'0xDEAD 0xBEEF KERNEL PANIC FATAL SYSTEM HALT BREACH ROOT',fg(i,h){const flicker=Math.random()>0.92;return flicker?'#fff':`hsl(${0+Math.random()*10},100%,${45+Math.random()*15}%)`}},
+    binary:{bg:'rgba(0,0,0,0.06)',chars:'01',fg(i,h){return'#0a0'}},
+    rainbow:{bg:'rgba(0,0,0,0.05)',chars:'01234567890ABCDEF<>{}[]|/*#',fg(i,h){return`hsl(${(h*2+i*8)%360},100%,55%)`}}
+  };
+  function init(){
+    cvs.width=cvs.offsetWidth;cvs.height=cvs.offsetHeight;
+    const fs=+el.querySelector('#rainFS').value;
+    cols=Math.floor(cvs.width/fs);drops=Array(cols).fill(1);
+  }
+  function draw(){
+    const tk=el.querySelector('#rainTheme').value;
+    const theme=themes[tk]||themes.matrix;
+    const fs=+el.querySelector('#rainFS').value;
+    ctx.fillStyle=theme.bg;ctx.fillRect(0,0,cvs.width,cvs.height);
+    ctx.font=fs+'px monospace';
+    const chars=[...theme.chars];
+    hue++;
+    for(let i=0;i<cols;i++){
+      const c=chars[Math.floor(Math.random()*chars.length)];
+      ctx.fillStyle=theme.fg(i,hue);
+      /* 头部高亮效果 */
+      if(drops[i]>1&&drops[i]<4){ctx.shadowColor=theme.fg(i,hue);ctx.shadowBlur=12}
+      else{ctx.shadowBlur=0}
+      ctx.fillText(c,i*fs,drops[i]*fs);
+      ctx.shadowBlur=0;
+      if(drops[i]*fs>cvs.height&&Math.random()>.975)drops[i]=0;
+      drops[i]++;
+    }
+  }
+  /* 速度: slider 值越大→delay越小→越快 */
+  function getDelay(){const v=+el.querySelector('#rainSpd').value;return 130-v}
+  function loop(){draw();raf=setTimeout(loop,getDelay())}
+  el.querySelector('#rainToggle').onclick=function(){
+    if(running){running=false;clearTimeout(raf);this.textContent='▶ 开始';this.className='t-btn t-btn-s'}
+    else{running=true;init();loop();this.textContent='⏸ 暂停';this.className='t-btn t-btn-o'}
+  };
+  el.querySelector('#rainFull').onclick=()=>{cvs.requestFullscreen?cvs.requestFullscreen():cvs.webkitRequestFullscreen&&cvs.webkitRequestFullscreen()};
+  el.querySelector('#rainTheme').onchange=()=>{if(running){clearTimeout(raf);ctx.fillStyle='#000';ctx.fillRect(0,0,cvs.width,cvs.height);init();loop()}};
+  el.querySelector('#rainFS').oninput=()=>{if(running){clearTimeout(raf);init();loop()}};
+  var ro=new ResizeObserver(()=>{if(running){clearTimeout(raf);init();loop()}});ro.observe(cvs);
+  el._cleanup=()=>{running=false;clearTimeout(raf);ro.disconnect()};
+}}

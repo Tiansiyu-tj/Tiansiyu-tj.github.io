@@ -1,0 +1,47 @@
+{id:'json',name:'JSON 格式化',icon:'🔧',cat:'dev',desc:'美化 · 压缩 · 树形浏览 · 语法高亮',
+html(){return'<style>'
++'.jt-tree{font-family:"Fira Code",monospace;font-size:.82em;line-height:1.8;padding:4px 0}'
++'.jt-tree details{margin-left:18px;border-left:1px solid var(--border-warm);padding-left:0}'
++'.jt-tree details>div{padding-left:12px}'
++'.jt-tree summary{cursor:pointer;list-style:none;position:relative;padding:2px 0 2px 20px;border-radius:var(--radius-xs);transition:background .15s}'
++'.jt-tree summary:hover{background:var(--bg-zebra)}'
++'.jt-tree summary::-webkit-details-marker{display:none}'
++'.jt-tree summary::before{content:"▸";position:absolute;left:4px;font-size:13px;color:var(--font-color-2);transition:transform .2s var(--ease-soft)}'
++'.jt-tree details[open]>summary::before{transform:rotate(90deg)}'
++'.jt-tree .jk{color:var(--accent);font-weight:500}'
++'.jt-tree .js{color:var(--series-accent)}'
++'.jt-tree .jn{color:var(--accent);font-weight:600}'
++'.jt-tree .jb{color:var(--font-color-3);font-style:italic}'
++'.jt-tree .jnull{color:var(--font-color-2);font-style:italic}'
++'.jt-tree .jbracket{color:var(--font-color-2);font-weight:600}'
++'.jt-tree .jcount{color:var(--font-color-3);font-size:.8em;opacity:.7;margin-left:6px;font-weight:400}'
++'.jt-tree .jleaf{padding:2px 0 2px 20px}'
++'.jt-tree .jclose{padding-left:20px;color:var(--font-color-2);font-weight:600}'
++'</style>'
++'<div class="t-lbl">输入 JSON</div><textarea class="t-ta" id="jsonIn" rows="6">{"name":"工具箱","tools":31,"nested":{"a":[1,2,3],"deep":{"x":true,"y":null}}}</textarea><div class="t-row" style="margin-top:6px"><button class="t-btn" id="jsonFmt">格式化</button><button class="t-btn t-btn-o" id="jsonTree">🌲 树形</button><button class="t-btn t-btn-o" id="jsonMin">压缩</button><button class="t-btn t-btn-o" id="jsonCopy">复制</button></div><div id="jsonOut" class="t-res" style="max-height:400px"></div>'},
+init(el){
+  const inp=el.querySelector('#jsonIn'),out=el.querySelector('#jsonOut');
+  function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+  function color(s){s=esc(s);return s
+    .replace(/("(?:\\.|[^"\\])*")\s*:/g,'<span class="jk">$1</span>:')
+    .replace(/:(\s*)("(?:\\.|[^"\\])*")/g,':$1<span class="js">$2</span>')
+    .replace(/:\s*(\d+\.?\d*)/g,': <span class="jn">$1</span>')
+    .replace(/:\s*(true|false|null)/g,': <span class="jb">$1</span>')}
+  /* ===== 树形渲染 ===== */
+  function buildTree(val,key,depth){
+    depth=depth||0;
+    var prefix=key!==undefined?'<span class="jk">"'+esc(String(key))+'"</span>: ':'';
+    if(val===null)return'<div class="jleaf">'+prefix+'<span class="jnull">null</span></div>';
+    if(typeof val!=='object')return'<div class="jleaf">'+prefix+(typeof val==='string'?'<span class="js">"'+esc(val)+'"</span>':typeof val==='number'?'<span class="jn">'+val+'</span>':'<span class="jb">'+val+'</span>')+'</div>';
+    var isArr=Array.isArray(val);var keys=Object.keys(val);var len=keys.length;
+    var bracket=isArr?['[',']']:['{','}'];
+    var label=prefix+'<span class="jbracket">'+bracket[0]+'</span><span class="jcount">'+len+(isArr?' items':' keys')+'</span>';
+    var h='<details'+(depth<3?' open':'')+'><summary>'+label+'</summary>';
+    keys.forEach(function(k){h+=buildTree(val[isArr?+k:k],isArr?+k:k,depth+1)});
+    h+='<div class="jclose">'+bracket[1]+'</div></details>';return h;
+  }
+  el.querySelector('#jsonFmt').onclick=()=>{try{out.innerHTML='<pre style="margin:0;white-space:pre-wrap;word-break:break-all">'+color(JSON.stringify(JSON.parse(inp.value),null,2))+'</pre>'}catch(e){out.textContent='错误: '+e.message}};
+  el.querySelector('#jsonTree').onclick=()=>{try{var obj=JSON.parse(inp.value);out.innerHTML='<div class="jt-tree">'+buildTree(obj)+'</div>'}catch(e){out.textContent='错误: '+e.message}};
+  el.querySelector('#jsonMin').onclick=()=>{try{out.textContent=JSON.stringify(JSON.parse(inp.value))}catch(e){out.textContent='错误: '+e.message}};
+  el.querySelector('#jsonCopy').onclick=()=>{navigator.clipboard.writeText(out.textContent);el.querySelector('#jsonCopy').textContent='✓';setTimeout(()=>el.querySelector('#jsonCopy').textContent='复制',1200)};
+}}

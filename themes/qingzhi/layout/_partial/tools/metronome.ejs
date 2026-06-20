@@ -1,0 +1,30 @@
+{id:'metronome',name:'节拍器',icon:'🥁',cat:'music',desc:'可调节拍 · 多种拍号',
+html(){return'<div style="text-align:center"><div id="metBpm" style="font-size:3em;font-weight:700;color:#409eff;margin:12px 0">120</div><div style="color:#888;margin-bottom:8px">BPM</div><div class="t-row" style="justify-content:center"><span class="t-lbl">40</span><input type="range" id="metSpeed" min="40" max="240" value="120" style="width:200px"><span class="t-lbl">240</span></div><div class="t-row" style="justify-content:center;margin-top:8px"><select class="t-sel" id="metSig"><option value="4">4/4</option><option value="3">3/4</option><option value="2">2/4</option><option value="6">6/8</option></select></div><div id="metDots" style="margin:16px 0;display:flex;gap:10px;justify-content:center"></div><button class="t-btn" id="metToggle" style="width:120px;height:48px;border-radius:24px;font-size:1.1em">▶ 开始</button></div>'},
+init(el){
+  let running=false,timer=null,beat=0,actx=null;
+  const beats=()=>+el.querySelector('#metSig').value;
+  function renderDots(){const d=el.querySelector('#metDots');d.innerHTML='';for(let i=0;i<beats();i++){const c=document.createElement('span');c.className='metro-circle';d.appendChild(c)}}
+  renderDots();
+  el.querySelector('#metSig').onchange=()=>{renderDots();beat=0};
+  el.querySelector('#metSpeed').oninput=function(){el.querySelector('#metBpm').textContent=this.value};
+  function tick(){
+    if(!actx)actx=new(window.AudioContext||window.webkitAudioContext)();
+    const dots=el.querySelectorAll('.metro-circle');
+    dots.forEach(d=>d.classList.remove('beat','accent'));
+    const cur=dots[beat%beats()];
+    if(cur)cur.classList.add(beat%beats()===0?'accent':'beat');
+    const osc=actx.createOscillator();const g=actx.createGain();
+    osc.connect(g);g.connect(actx.destination);
+    osc.frequency.value=beat%beats()===0?880:660;
+    g.gain.setValueAtTime(0.3,actx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,actx.currentTime+0.08);
+    osc.start(actx.currentTime);osc.stop(actx.currentTime+0.08);
+    beat++;
+  }
+  el.querySelector('#metToggle').onclick=function(){
+    if(running){running=false;clearInterval(timer);this.textContent='▶ 开始';this.classList.remove('t-btn-d');this.classList.add('t-btn')}
+    else{running=true;beat=0;tick();timer=setInterval(tick,60000/(+el.querySelector('#metSpeed').value));this.textContent='⏸ 停止';this.classList.add('t-btn-d')}
+  };
+  el.querySelector('#metSpeed').addEventListener('input',()=>{if(running){clearInterval(timer);timer=setInterval(tick,60000/(+el.querySelector('#metSpeed').value))}});
+  el._cleanup=()=>{clearInterval(timer);if(actx)try{actx.close()}catch(e){}};
+}}

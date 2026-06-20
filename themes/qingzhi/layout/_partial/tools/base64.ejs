@@ -1,0 +1,13 @@
+{id:'base64',name:'Base64 编解码',icon:'🔄',cat:'dev',desc:'双向实时互转 · 文件模式',
+html(){return'<div class="t-row"><button class="t-btn t-btn-o" id="b64ModeText" style="font-weight:700">文本模式</button><button class="t-btn t-btn-o" id="b64ModeFile">文件模式</button></div><div id="b64TextMode"><div class="t-split"><div><div class="t-lbl">📝 原文（输入即转换）</div><textarea class="t-ta" id="b64Text" rows="5">Hello, 工具箱!</textarea></div><div><div class="t-lbl">🔑 Base64（输入即转换）</div><textarea class="t-ta" id="b64Code" rows="5"></textarea></div></div></div><div id="b64FileMode" style="display:none"><input type="file" id="b64File"><div id="b64FileOut" class="t-res" style="max-height:200px;margin-top:8px"></div><button class="t-btn t-btn-o" id="b64FileCopy" style="margin-top:6px">📋 复制</button></div>'},
+init(el){
+  const txt=el.querySelector('#b64Text'),code=el.querySelector('#b64Code');
+  let lock=false;
+  txt.oninput=()=>{if(lock)return;lock=true;try{code.value=btoa(unescape(encodeURIComponent(txt.value)))}catch(e){code.value='⚠ '+e.message}lock=false};
+  code.oninput=()=>{if(lock)return;lock=true;try{txt.value=decodeURIComponent(escape(atob(code.value)))}catch(e){txt.value='⚠ '+e.message}lock=false};
+  txt.oninput();
+  el.querySelector('#b64ModeText').onclick=()=>{el.querySelector('#b64TextMode').style.display='';el.querySelector('#b64FileMode').style.display='none';el.querySelector('#b64ModeText').style.fontWeight='700';el.querySelector('#b64ModeFile').style.fontWeight=''};
+  el.querySelector('#b64ModeFile').onclick=()=>{el.querySelector('#b64TextMode').style.display='none';el.querySelector('#b64FileMode').style.display='';el.querySelector('#b64ModeFile').style.fontWeight='700';el.querySelector('#b64ModeText').style.fontWeight=''};
+  el.querySelector('#b64File').onchange=function(){const f=this.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{el.querySelector('#b64FileOut').textContent=e.target.result.split(',')[1]||''};r.readAsDataURL(f)};
+  el.querySelector('#b64FileCopy').onclick=()=>navigator.clipboard.writeText(el.querySelector('#b64FileOut').textContent);
+}}

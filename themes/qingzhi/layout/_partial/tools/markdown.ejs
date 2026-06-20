@@ -1,0 +1,42 @@
+{id:'markdown',name:'Markdown 预览',icon:'✏️',cat:'dev',desc:'GFM · 表格 · 任务列表 · 脚注 · 语法高亮',
+html(){return'<style>.md-prev{flex:1;overflow:auto;padding:16px 20px;background:#fff;border-radius:8px;border:1px solid #ddd;min-height:260px;font-size:.9em;line-height:1.75;color:#333;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif}.md-prev h1{font-size:1.6em;border-bottom:2px solid #eaecef;padding-bottom:.3em;margin:1.2em 0 .6em}.md-prev h2{font-size:1.35em;border-bottom:1px solid #eaecef;padding-bottom:.25em;margin:1em 0 .5em}.md-prev h3{font-size:1.15em;margin:.9em 0 .4em}.md-prev h4{font-size:1em;margin:.8em 0 .3em}.md-prev blockquote{margin:.8em 0;padding:.6em 1em;border-left:4px solid #42b983;background:#f8f8f8;color:#555;border-radius:0 4px 4px 0}.md-prev pre{background:#282c34;color:#abb2bf;padding:14px 16px;border-radius:6px;overflow-x:auto;font-size:.85em;line-height:1.5;margin:.8em 0}.md-prev code{background:#f0f0f0;padding:2px 5px;border-radius:3px;font-size:.88em;color:#e96900}.md-prev pre code{background:none;padding:0;color:inherit;font-size:inherit}.md-prev table{border-collapse:collapse;width:100%;margin:.8em 0}.md-prev th,.md-prev td{border:1px solid #dfe2e5;padding:8px 12px;text-align:left}.md-prev th{background:#f6f8fa;font-weight:600}.md-prev tr:nth-child(2n){background:#fafbfc}.md-prev img{max-width:100%;border-radius:4px}.md-prev a{color:#42b983;text-decoration:none}.md-prev a:hover{text-decoration:underline}.md-prev hr{border:none;border-top:2px solid #eaecef;margin:1.5em 0}.md-prev ul,.md-prev ol{padding-left:1.8em}.md-prev li{margin:.25em 0}.md-prev .task-list-item{list-style:none;margin-left:-1.5em}.md-prev .task-list-item input{margin-right:.4em;vertical-align:middle}.md-prev mark{background:#fff3bf;padding:1px 4px;border-radius:2px}.md-prev sup{font-size:.75em}.md-prev .footnotes-sep{margin-top:2em}.md-prev .footnotes{font-size:.85em;color:#666}.md-prev del{color:#999}</style><div class="t-row" style="gap:6px;margin-bottom:6px;flex-wrap:wrap;justify-content:center"><button class="t-btn t-btn-d" id="mdCopy" style="font-size:.75em">📋 复制 HTML</button><button class="t-btn t-btn-d" id="mdClear" style="font-size:.75em">🗑️ 清空</button><span id="mdStatus" style="font-size:.72em;color:#888"></span></div><div class="t-split" style="height:440px;max-height:80vh"><div style="display:flex;flex-direction:column"><div class="t-lbl">Markdown 源码</div><textarea class="t-ta" id="mdIn" style="flex:1;min-height:220px;resize:none;font-family:Cascadia Code,Fira Code,Consolas,monospace;font-size:.85em;line-height:1.5;tab-size:4"></textarea></div><div style="display:flex;flex-direction:column"><div class="t-lbl">实时预览</div><div id="mdOut" class="md-prev"></div></div></div>'},
+async init(el){
+  var defaultMd='# Markdown 预览器\n\n## 基本语法\n\n**加粗** *斜体* ~~删除线~~ `行内代码` ==高亮==\n\n> 引用文本，支持嵌套\n> > 二层引用\n\n---\n\n## 列表\n\n- 无序列表\n  - 嵌套项\n- [x] 已完成任务\n- [ ] 未完成任务\n\n1. 有序列表\n2. 第二项\n\n## 表格\n\n| 语法 | 描述 | 示例 |\n|:-----|:----:|-----:|\n| 加粗 | 两个星号 | **文字** |\n| 斜体 | 一个星号 | *文字* |\n| 代码 | 反引号 | `code` |\n\n## 代码块\n\n```javascript\nfunction hello(name) {\n  console.log("Hello, " + name + "!");\n  return { greeting: true };\n}\n```\n\n## 链接与脚注\n\n[GitHub](https://github.com) · 脚注示例[^1]\n\n[^1]: 这是一条脚注说明。';
+  el.querySelector('#mdIn').value=defaultMd;
+  var out=el.querySelector('#mdOut');
+  var status=el.querySelector('#mdStatus');
+  out.innerHTML='<span style="color:#999">正在加载 markdown-it ...</span>';
+  function miniMd(s){
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/^#### (.+)$/gm,'<h4>$1</h4>').replace(/^### (.+)$/gm,'<h3>$1</h3>')
+      .replace(/^## (.+)$/gm,'<h2>$1</h2>').replace(/^# (.+)$/gm,'<h1>$1</h1>')
+      .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\*(.+?)\*/g,'<em>$1</em>')
+      .replace(/~~(.+?)~~/g,'<del>$1</del>').replace(/`([^`]+)`/g,'<code>$1</code>')
+      .replace(/==(.+?)==/g,'<mark>$1</mark>')
+      .replace(/^> (.+)$/gm,'<blockquote>$1</blockquote>')
+      .replace(/^- \[x\] (.+)$/gm,'<li class="task-list-item"><input type="checkbox" checked disabled> $1</li>')
+      .replace(/^- \[ \] (.+)$/gm,'<li class="task-list-item"><input type="checkbox" disabled> $1</li>')
+      .replace(/^- (.+)$/gm,'<li>$1</li>')
+      .replace(/^---$/gm,'<hr>')
+      .replace(/\n{2,}/g,'<br><br>').replace(/\n/g,'<br>');
+  }
+  var md=null;
+  var coreCdns=['https://cdn.jsdelivr.net/npm/markdown-it@14.1.0/dist/markdown-it.min.js','https://cdnjs.cloudflare.com/ajax/libs/markdown-it/14.1.0/markdown-it.min.js','https://unpkg.com/markdown-it@14.1.0/dist/markdown-it.min.js'];
+  var loaded=false;
+  for(var ci=0;ci<coreCdns.length;ci++){try{await loadJS(coreCdns[ci]);loaded=true;break}catch(e){continue}}
+  if(loaded&&typeof markdownit!=='undefined'){
+    md=markdownit({html:true,linkify:true,typographer:true,breaks:true});
+    try{await loadJS('https://cdn.jsdelivr.net/npm/markdown-it-footnote@4.0.0/dist/markdown-it-footnote.min.js');md.use(markdownitFootnote)}catch(e){}
+    try{await loadJS('https://cdn.jsdelivr.net/npm/markdown-it-task-lists@2.1.1/dist/markdown-it-task-lists.min.js');md.use(markdownitTaskLists)}catch(e){}
+    try{await loadJS('https://cdn.jsdelivr.net/npm/markdown-it-mark@2.0.0/dist/markdown-it-mark.min.js');md.use(markdownitMark)}catch(e){}
+    status.textContent='✅ markdown-it 14.1 已加载';
+  }else{status.textContent='⚠️ CDN 不可用，使用内置解析器'}
+  var inp=el.querySelector('#mdIn');
+  inp.addEventListener('keydown',function(e){
+    if(e.key==='Tab'){e.preventDefault();var s=inp.selectionStart,en=inp.selectionEnd;inp.value=inp.value.substring(0,s)+'    '+inp.value.substring(en);inp.selectionStart=inp.selectionEnd=s+4;inp.dispatchEvent(new Event('input'))}
+  });
+  var render=function(){try{out.innerHTML=md?md.render(inp.value):miniMd(inp.value)}catch(e){out.innerHTML=miniMd(inp.value)}};
+  inp.oninput=render;render();
+  el.querySelector('#mdCopy').onclick=function(){var h=out.innerHTML;navigator.clipboard.writeText(h).then(function(){el.querySelector('#mdCopy').textContent='✓ 已复制';setTimeout(function(){el.querySelector('#mdCopy').textContent='📋 复制 HTML'},1500)})};
+  el.querySelector('#mdClear').onclick=function(){inp.value='';render()};
+}}

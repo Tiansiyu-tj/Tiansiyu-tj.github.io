@@ -1,0 +1,96 @@
+{id:'diff',name:'文本对比',icon:'📃',cat:'dev',desc:'LCS 算法 · 并排/统一视图 · 文件对比',
+html(){return'<div class="t-split"><div><div class="t-row" style="justify-content:space-between;align-items:center"><span class="t-lbl">原始文本</span><label class="t-btn t-btn-d" style="font-size:.7em;cursor:pointer;margin:0">📂 上传<input type="file" id="diffFileA" accept=".txt,.md,.py,.js,.ts,.sh,.css,.html,.json,.xml,.yml,.yaml,.c,.cpp,.h,.java,.go,.rs,.rb,.php,.sql,.log,.csv,.ini,.cfg,.toml,.bat,.ps1" style="display:none"></label></div><textarea class="t-ta" id="diffA" rows="8" placeholder="粘贴或上传原始文本…"></textarea></div><div><div class="t-row" style="justify-content:space-between;align-items:center"><span class="t-lbl">修改文本</span><label class="t-btn t-btn-d" style="font-size:.7em;cursor:pointer;margin:0">📂 上传<input type="file" id="diffFileB" accept=".txt,.md,.py,.js,.ts,.sh,.css,.html,.json,.xml,.yml,.yaml,.c,.cpp,.h,.java,.go,.rs,.rb,.php,.sql,.log,.csv,.ini,.cfg,.toml,.bat,.ps1" style="display:none"></label></div><textarea class="t-ta" id="diffB" rows="8" placeholder="粘贴或上传修改文本…"></textarea></div></div><div class="t-row" style="gap:8px;margin-top:6px;flex-wrap:wrap;align-items:center"><button class="t-btn" id="diffRun">🔍 对比</button><button class="t-btn t-btn-o diffView active" data-v="split">并排视图</button><button class="t-btn t-btn-o diffView" data-v="unified">统一视图</button><label style="font-size:.75em"><input type="checkbox" id="diffTrim"> 忽略行首尾空白</label><span id="diffStats" style="font-size:.75em;color:#888;margin-left:auto"></span></div><div id="diffResult" style="margin-top:8px;border:1px solid #e8e8e8;border-radius:8px;overflow:hidden;max-height:420px;overflow-y:auto;background:#fafafa"></div>'},
+init(el){
+  var q=function(s){return el.querySelector(s)};
+  var viewMode='split';
+  q('#diffA').value='第一行内容\n第二行不变\n第三行要改\n第四行要删';
+  q('#diffB').value='第一行内容\n第二行不变\n第三行改了\n新增第五行';
+  /* 文件上传 */
+  function bindUpload(fileId,taId){q(fileId).onchange=function(){var f=this.files[0];if(!f)return;var r=new FileReader();r.onload=function(){q(taId).value=r.result};r.readAsText(f)}}
+  bindUpload('#diffFileA','#diffA');bindUpload('#diffFileB','#diffB');
+  /* 视图切换 */
+  el.querySelectorAll('.diffView').forEach(function(b){b.onclick=function(){el.querySelectorAll('.diffView').forEach(function(x){x.classList.remove('active')});this.classList.add('active');viewMode=this.dataset.v;run()}});
+  /* LCS 差异 */
+  function diff(){
+    var trim=q('#diffTrim').checked;
+    var a=q('#diffA').value.split('\n'),b=q('#diffB').value.split('\n');
+    var af=trim?a.map(function(s){return s.trim()}):a;
+    var bf=trim?b.map(function(s){return s.trim()}):b;
+    var n=af.length,m=bf.length;
+    var dp=[];for(var i=0;i<=n;i++){dp[i]=[];for(var j=0;j<=m;j++)dp[i][j]=0}
+    for(var i=1;i<=n;i++)for(var j=1;j<=m;j++)dp[i][j]=af[i-1]===bf[j-1]?dp[i-1][j-1]+1:Math.max(dp[i-1][j],dp[i][j-1]);
+    var ops=[];var i=n,j=m;
+    while(i>0||j>0){
+      if(i>0&&j>0&&af[i-1]===bf[j-1]){ops.unshift({type:'eq',a:a[i-1],b:b[j-1],ai:i,bi:j});i--;j--}
+      else if(j>0&&(i===0||dp[i][j-1]>=dp[i-1][j])){ops.unshift({type:'add',b:b[j-1],bi:j});j--}
+      else{ops.unshift({type:'del',a:a[i-1],ai:i});i--}
+    }
+    return ops;
+  }
+  function esc(s){return s?s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'):''}
+  /* 字符级差异高亮 */
+  function charDiff(old,nw){
+    if(!old||!nw)return{a:esc(old),b:esc(nw)};
+    var n=old.length,m=nw.length;
+    var dp=[];for(var i=0;i<=n;i++){dp[i]=[];for(var j=0;j<=m;j++)dp[i][j]=0}
+    for(var i=1;i<=n;i++)for(var j=1;j<=m;j++)dp[i][j]=old[i-1]===nw[j-1]?dp[i-1][j-1]+1:Math.max(dp[i-1][j],dp[i][j-1]);
+    var ra='',rb='';var i=n,j=m;
+    while(i>0||j>0){
+      if(i>0&&j>0&&old[i-1]===nw[j-1]){ra=esc(old[i-1])+ra;rb=esc(nw[j-1])+rb;i--;j--}
+      else if(j>0&&(i===0||dp[i][j-1]>=dp[i-1][j])){rb='<mark style="background:#a6f3a6;border-radius:2px">'+esc(nw[j-1])+'</mark>'+rb;j--}
+      else{ra='<mark style="background:#f8b4b4;border-radius:2px">'+esc(old[i-1])+'</mark>'+ra;i--}
+    }
+    return{a:ra,b:rb};
+  }
+  function renderSplit(ops){
+    var adds=0,dels=0,mods=0;
+    var rows='';
+    for(var k=0;k<ops.length;k++){
+      var o=ops[k];
+      if(o.type==='eq'){
+        rows+='<tr><td class="dln">'+o.ai+'</td><td class="dtd">'+esc(o.a)+'</td><td class="dln">'+o.bi+'</td><td class="dtd">'+esc(o.b)+'</td></tr>';
+      }else if(o.type==='del'){
+        /* 查看下一项是否是 add，形成修改对 */
+        if(k+1<ops.length&&ops[k+1].type==='add'){
+          var cd=charDiff(o.a,ops[k+1].b);
+          rows+='<tr><td class="dln dln-d">'+o.ai+'</td><td class="dtd dtd-d">'+cd.a+'</td><td class="dln dln-a">'+ops[k+1].bi+'</td><td class="dtd dtd-a">'+cd.b+'</td></tr>';
+          k++;mods++;
+        }else{
+          rows+='<tr><td class="dln dln-d">'+o.ai+'</td><td class="dtd dtd-d">'+esc(o.a)+'</td><td class="dln"></td><td class="dtd" style="background:#f9f9f9"></td></tr>';
+          dels++;
+        }
+      }else{
+        rows+='<tr><td class="dln"></td><td class="dtd" style="background:#f9f9f9"></td><td class="dln dln-a">'+o.bi+'</td><td class="dtd dtd-a">'+esc(o.b)+'</td></tr>';
+        adds++;
+      }
+    }
+    q('#diffStats').innerHTML='<span style="color:#27ae60">+'+adds+'</span> <span style="color:#e74c3c">-'+dels+'</span> <span style="color:#e6a23c">~'+mods+'</span>';
+    return'<table class="dtbl dtbl-split">'+rows+'</table>';
+  }
+  function renderUnified(ops){
+    var adds=0,dels=0;
+    var rows='';
+    for(var k=0;k<ops.length;k++){
+      var o=ops[k];
+      if(o.type==='eq'){rows+='<tr><td class="dln">'+o.ai+'</td><td class="dln">'+o.bi+'</td><td class="dtd">&nbsp; '+esc(o.a)+'</td></tr>'}
+      else if(o.type==='del'){rows+='<tr><td class="dln dln-d">'+o.ai+'</td><td class="dln"></td><td class="dtd dtd-d">- '+esc(o.a)+'</td></tr>';dels++}
+      else{rows+='<tr><td class="dln"></td><td class="dln dln-a">'+o.bi+'</td><td class="dtd dtd-a">+ '+esc(o.b)+'</td></tr>';adds++}
+    }
+    q('#diffStats').innerHTML='<span style="color:#27ae60">+'+adds+'</span> <span style="color:#e74c3c">-'+dels+'</span>';
+    return'<table class="dtbl">'+rows+'</table>';
+  }
+  function run(){
+    var ops=diff();
+    var same=ops.every(function(o){return o.type==='eq'});
+    if(same){q('#diffResult').innerHTML='<div style="text-align:center;padding:30px;color:#67c23a;font-size:.9em">✓ 两段文本完全相同</div>';q('#diffStats').innerHTML='';return}
+    q('#diffResult').innerHTML=viewMode==='split'?renderSplit(ops):renderUnified(ops);
+  }
+  q('#diffRun').onclick=run;
+  q('#diffTrim').onchange=run;
+  /* 在 init 最后注入样式 */
+  if(!document.getElementById('diffCSS')){
+    var st=document.createElement('style');st.id='diffCSS';
+    st.textContent='.dtbl{width:100%;border-collapse:collapse;font-family:Consolas,Monaco,monospace;font-size:.78em;line-height:1.6;table-layout:fixed}.dtbl td{padding:0 6px;white-space:pre-wrap;word-break:break-all;vertical-align:top}.dln{width:32px;min-width:32px;max-width:32px;text-align:right;color:#bbb;font-size:.85em;user-select:none;border-right:1px solid #eee;background:#fafafa}.dtbl-split .dtd{width:calc(50% - 32px)}.dln-d{background:#fde8e8;color:#c0392b}.dln-a{background:#e6f9e6;color:#27ae60}.dtd-d{background:#fef0f0}.dtd-a{background:#f0faf0}.dtbl tr:hover td{background:rgba(64,158,255,.04)}';
+    document.head.appendChild(st);
+  }
+}}

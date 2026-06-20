@@ -1,0 +1,89 @@
+{id:'frontmatter',name:'文章模板',icon:'📝',cat:'productivity',desc:'Front-matter 生成 · 下载 .md',
+html(){return'<div style="font-size:.75em;color:#888;margin-bottom:10px">✍️ 生成 Hexo 文章 Front-matter · 自动 UUID · 一键下载 .md</div>'
++'<div class="t-row"><span class="t-lbl" style="min-width:55px">标题 *</span><input class="t-in" id="fmTitle" placeholder="文章标题（必填）" style="flex:1"></div>'
++'<div class="t-row"><span class="t-lbl" style="min-width:55px">作者</span><input class="t-in" id="fmAuthor" value="yeliqin666" placeholder="多人用逗号分隔" style="flex:1"></div>'
++'<div class="t-row"><span class="t-lbl" style="min-width:55px">标签</span><input class="t-in" id="fmTags" placeholder="逗号分隔，如: 物理,备考" style="flex:1"></div>'
++'<div class="t-row"><span class="t-lbl" style="min-width:55px">分类</span><input class="t-in" id="fmCats" placeholder="逗号分隔，如: 资源" style="flex:1"></div>'
++'<div style="display:flex;flex-wrap:wrap;gap:8px 16px;margin:8px 0;font-size:.82em">'
++'<label title="生成带编号的章节标题"><input type="checkbox" id="fmNumSec"> 章节编号</label>'
++'<label title="生成目录"><input type="checkbox" id="fmToc"> 目录(toc)</label>'
++'<label title="文章置顶"><input type="checkbox" id="fmTop"> 置顶(top)</label>'
++'<label title="加密文章"><input type="checkbox" id="fmEncrypt"> 加密</label>'
++'<label title="关闭评论"><input type="checkbox" id="fmNoComment"> 关闭评论</label>'
++'</div>'
++'<div id="fmEncRow" class="t-row" style="display:none"><span class="t-lbl" style="min-width:55px">密码</span><input class="t-in" id="fmPwd" type="password" placeholder="加密密码" style="flex:1;max-width:200px"></div>'
++'<div class="t-row"><span class="t-lbl" style="min-width:55px">专栏</span><input class="t-in" id="fmSeries" placeholder="如: 原子物理学（可选）" style="flex:1"><input class="t-in" id="fmSeriesSlug" placeholder="slug: atomic-physics" style="flex:1;max-width:160px"></div>'
++'<div class="t-row" style="justify-content:center;gap:8px;margin-top:10px">'
++'<button class="t-btn t-btn-s" id="fmGen">⚡ 生成预览</button>'
++'<button class="t-btn" id="fmDl">📥 下载 .md</button>'
++'<button class="t-btn t-btn-o" id="fmCopy" style="font-size:.75em">📋 复制</button></div>'
++'<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px;justify-content:center;font-size:.72em">'
++'<button class="t-btn t-btn-o fm-preset" data-p="essay" style="padding:4px 10px;font-size:.9em">💬 随笔</button>'
++'<button class="t-btn t-btn-o fm-preset" data-p="academic" style="padding:4px 10px;font-size:.9em">📚 学术</button>'
++'<button class="t-btn t-btn-o fm-preset" data-p="resource" style="padding:4px 10px;font-size:.9em">📦 资源</button>'
++'<button class="t-btn t-btn-o fm-preset" data-p="reading" style="padding:4px 10px;font-size:.9em">📖 读书</button>'
++'</div>'
++'<pre id="fmOut" class="t-res" style="min-height:120px;white-space:pre;font-size:.8em"></pre>'},
+init(el){
+  function q(s){return el.querySelector(s)}
+  function uuid(){var s4=function(){return(((1+Math.random())*65536)|0).toString(16).substring(1)};return s4()+s4()+'-'+s4()+'-'+s4()+'-'+s4()+'-'+s4()+s4()+s4()}
+  function pad2(n){return n<10?'0'+n:''+n}
+  function now(){var d=new Date();return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())+' '+pad2(d.getHours())+':'+pad2(d.getMinutes())+':'+pad2(d.getSeconds())}
+  function splitTrim(s){return s?s.split(',').map(function(x){return x.trim()}).filter(function(x){return x}):[]}
+  q('#fmEncrypt').onchange=function(){q('#fmEncRow').style.display=this.checked?'flex':'none'};
+  var presets={
+    essay:{tags:'随笔',cats:'有感',numSec:false,toc:false,series:'',slug:''},
+    academic:{tags:'物理,备考',cats:'资源',numSec:true,toc:true,series:'',slug:''},
+    resource:{tags:'工具,资源',cats:'资源',numSec:false,toc:false,series:'',slug:''},
+    reading:{tags:'读书',cats:'读书',numSec:false,toc:false,series:'',slug:''}
+  };
+  el.querySelectorAll('.fm-preset').forEach(function(btn){btn.onclick=function(){
+    var p=presets[btn.dataset.p];if(!p)return;
+    q('#fmTags').value=p.tags;q('#fmCats').value=p.cats;
+    q('#fmNumSec').checked=p.numSec;q('#fmToc').checked=p.toc;
+    q('#fmSeries').value=p.series;q('#fmSeriesSlug').value=p.slug;
+    gen();
+  }});
+  function gen(){
+    var title=q('#fmTitle').value.trim();
+    if(!title){q('#fmOut').textContent='⚠️ 请输入标题';return''}
+    var lines=[];
+    lines.push('---');
+    lines.push('uuid: '+uuid());
+    lines.push('title: '+title);
+    lines.push('date: '+now());
+    var authors=splitTrim(q('#fmAuthor').value);
+    if(authors.length===0)authors=['yeliqin666'];
+    if(authors.length===1){lines.push('author: '+authors[0])}
+    else{lines.push('author:');authors.forEach(function(a){lines.push('  - '+a)})}
+    if(q('#fmNumSec').checked){lines.push('numbersections: true');lines.push('secnumdepth: 3')}
+    if(q('#fmToc').checked)lines.push('toc: true');
+    var series=q('#fmSeries').value.trim();
+    if(series){lines.push('series: '+series);var slug=q('#fmSeriesSlug').value.trim();if(slug)lines.push('series_slug: '+slug)}
+    if(q('#fmTop').checked)lines.push('top: true');
+    if(q('#fmEncrypt').checked){var pwd=q('#fmPwd').value.trim();if(pwd)lines.push('password: '+pwd)}
+    if(q('#fmNoComment').checked)lines.push('comment: false');
+    var tags=splitTrim(q('#fmTags').value);
+    lines.push('tags:');if(tags.length)tags.forEach(function(t){lines.push('  - '+t)});else lines.push('  - ');
+    var cats=splitTrim(q('#fmCats').value);
+    lines.push('categories:');if(cats.length)cats.forEach(function(c){lines.push('  - '+c)});else lines.push('  - ');
+    lines.push('---');lines.push('');
+    var result=lines.join('\n');
+    q('#fmOut').textContent=result;
+    return result
+  }
+  q('#fmGen').onclick=gen;
+  q('#fmDl').onclick=function(){
+    var content=gen();if(!content)return;
+    var title=q('#fmTitle').value.trim();
+    var a=document.createElement('a');
+    a.href='data:text/plain;charset=utf-8,'+encodeURIComponent(content);
+    a.download=title+'.md';a.style.display='none';
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+  };
+  q('#fmCopy').onclick=function(){
+    var content=gen();if(!content)return;
+    navigator.clipboard.writeText(content).then(function(){q('#fmCopy').textContent='✓ 已复制';setTimeout(function(){q('#fmCopy').textContent='📋 复制'},1500)});
+  };
+  q('#fmTitle').oninput=gen;
+}}

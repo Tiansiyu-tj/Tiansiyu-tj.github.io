@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="<%= config.language || 'en' %>">
+    <%- partial('_partial/configcss/font') %>
+    <%- partial('_partial/head') %>
+    <%- partial('_partial/configcss/width') %>
+    <%- partial('_partial/configcss/color') %>
+    <%- partial('_partial/configcss/imageShow') %>
+
+    <body>
+        <% if(theme.tool.leftToc) { %>
+            <% if(is_post() && (!('leftToc' in page) || page.leftToc == true)) { %>
+                <div class="left-toc-container">
+                    <nav id="toc" class="bs-docs-sidebar"></nav>
+                </div>
+            <% } %>
+        <% } %>
+        <div class="paper">
+
+            <% var tags,tagsInside, categories, categoriesInside; %>
+
+            <% if(path == "index.html") { %>
+                <div class="shadow-drop-2-bottom index-main">
+                    <%- partial('_partial/header') %>
+                    <%- partial('index') %>
+                    <% if(theme.index.list) { %>
+                        <%- partial('list') %>
+                    <% } %>
+                    <%- partial('_partial/aplayer') %>
+                    <%- partial('_partial/footer') %>
+                </div>
+            <% } else if(path == "list/index.html") { %>
+                <div class="shadow-drop-2-top paper-main">
+                     <%- partial('_partial/post-header') %>
+                     <%- partial('list') %>
+                     <%- partial('_partial/footer') %>
+                </div>
+            <% } else if(path == "404.html") { %>
+                <div class="shadow-drop-2-top paper-main">
+                    <%- partial('_partial/404-template') %>
+                    <%- partial('_partial/footer') %>
+                </div>
+            <% } else if(path == "recent-updates/index.html") { %>
+                <div class="shadow-drop-2-top paper-main">
+                    <%- partial('_partial/post-header') %>
+                    <%- partial('_partial/recent-updates') %>
+                    <%- partial('_partial/footer') %>
+               </div>
+            <% } else { %>
+                <div class="shadow-drop-2-bottom paper-main">
+                    <%- partial('_partial/post-header') %>
+
+                    <% if(tags = (path == "tags/index.html")) { %>
+                            <%- partial('tags') %>
+                    <% } %>
+                    <% if(categories = (path == "categories/index.html")) { %>
+                            <%- partial('categories') %>
+                    <% } %>
+
+                    <% if(tagsInside = (path.length > "tags/index.html".length && path.substring(0, 5) == "tags/")) { %>
+                            <%- partial('_partial/tags-list') %>
+                    <% } %>
+                    <% if(categoriesInside = (path.length > "categories/index.html".length && path.substring(0, 11) == "categories/")) { %>
+                        <%- partial('_partial/categories-list') %>
+                    <% } %>
+
+                    <% var isTools = (path == "tools/index.html"); %>
+                    <% if(isTools) { %>
+                        <%- partial('tools') %>
+                    <% } %>
+
+                    <% var seriesIndex = (path == "series/index.html"); %>
+                    <% if(seriesIndex) { %>
+                        <%- partial('series-index') %>
+                    <% } %>
+                    <% var seriesDetail = (!seriesIndex && path.substring(0, 7) == "series/"); %>
+                    <% if(seriesDetail) { %>
+                        <%- partial('series-detail') %>
+                    <% } %>
+
+                    <% if (!tags && !categories && !tagsInside && !categoriesInside && !isTools && !seriesIndex && !seriesDetail) { %>
+                        <%- partial('post') %>
+
+                    <% } %>
+
+                    <%- partial('_partial/footer') %>
+                </div>
+            <% } %>
+            <% if(theme.tool.returnToTop) { %>
+                <div class="progress-wrap shadow-drop-2-bottom">
+                    <svg class="progress-circle svg-content" width="100%" height="100%" viewBox="-1 -1 102 102">
+                        <path d="M50,1 a49,49 0 0,1 0,98 a49,49 0 0,1 0,-98"/>
+                    </svg>
+                    <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12 8l-6 6h12z"/></svg>
+                </div>
+            <% } %>
+            <% if(theme.tool.returnToLast) { %>
+                <div class="return-to-last-progress-wrap shadow-drop-2-bottom">
+                    <svg class="progress-circle svg-content" width="100%" height="100%" viewBox="-1 -1 102 102">
+                        <path d="M50,1 a49,49 0 0,1 0,98 a49,49 0 0,1 0,-98"/>
+                    </svg>
+                    <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+                </div>
+            <% } %>
+
+            <script defer src="<%= url_for('/js/emojiHandler.js') %>"></script>
+            <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        wrapEmojis('.paper');
+
+        /* ── GFM Alerts 后处理 ── */
+        var alertIcons = {
+            note:      '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"/></svg>',
+            tip:       '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.5c-2.363 0-4 1.69-4 3.75 0 .984.424 1.625.984 2.304l.214.253c.223.264.47.556.673.848.284.411.537.896.621 1.49a.75.75 0 0 1-1.484.211c-.04-.282-.163-.547-.37-.847a8 8 0 0 0-.542-.68c-.084-.1-.173-.205-.268-.32C3.201 7.75 2.5 6.766 2.5 5.25 2.5 2.31 4.863 0 8 0s5.5 2.31 5.5 5.25c0 1.516-.701 2.5-1.328 3.259-.095.115-.184.22-.268.319-.207.245-.383.453-.541.681-.208.3-.33.565-.37.847a.751.751 0 0 1-1.485-.212c.084-.593.337-1.078.621-1.489.203-.292.45-.584.673-.848l.213-.253c.561-.679.985-1.32.985-2.304 0-2.06-1.637-3.75-4-3.75ZM5.75 12h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1 0-1.5ZM6 15.25a.75.75 0 0 1 .75-.75h2.5a.75.75 0 0 1 0 1.5h-2.5a.75.75 0 0 1-.75-.75Z"/></svg>',
+            important: '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M0 1.75C0 .784.784 0 1.75 0h12.5C15.216 0 16 .784 16 1.75v9.5A1.75 1.75 0 0 1 14.25 13H8.06l-2.573 2.573A1.458 1.458 0 0 1 3 14.543V13H1.75A1.75 1.75 0 0 1 0 11.25Zm1.75-.25a.25.25 0 0 0-.25.25v9.5c0 .138.112.25.25.25h2a.75.75 0 0 1 .75.75v2.19l2.72-2.72a.749.749 0 0 1 .53-.22h6.5a.25.25 0 0 0 .25-.25v-9.5a.25.25 0 0 0-.25-.25Zm7 2.25v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 9a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"/></svg>',
+            warning:   '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"/></svg>',
+            caution:   '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M4.47.22A.749.749 0 0 1 5 0h6c.199 0 .389.079.53.22l4.25 4.25c.141.14.22.331.22.53v6a.749.749 0 0 1-.22.53l-4.25 4.25A.749.749 0 0 1 11 16H5a.749.749 0 0 1-.53-.22L.22 11.53A.749.749 0 0 1 0 11V5c0-.199.079-.389.22-.53Zm.84 1.28L1.5 5.31v5.38l3.81 3.81h5.38l3.81-3.81V5.31L10.69 1.5ZM8 4a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 8 4Zm0 8a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"/></svg>'
+        };
+        var labels = { note:'Note', tip:'Tip', important:'Important', warning:'Warning', caution:'Caution' };
+
+        document.querySelectorAll('.post-md blockquote').forEach(function(bq) {
+            var fp = bq.querySelector('p:first-child');
+            if (!fp) return;
+            var m = fp.innerHTML.match(/^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*/i);
+            if (!m) return;
+            var t = m[1].toLowerCase();
+            bq.className = 'gfm-alert gfm-alert-' + t;
+            fp.innerHTML = fp.innerHTML.replace(m[0], '');
+            if (!fp.textContent.trim()) fp.remove();
+            var title = document.createElement('p');
+            title.className = 'gfm-alert-title';
+            title.innerHTML = (alertIcons[t] || '') + ' ' + labels[t];
+            bq.insertBefore(title, bq.firstChild);
+        });
+    });
+            </script>
+    </body>
+</html>

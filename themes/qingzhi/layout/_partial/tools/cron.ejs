@@ -1,0 +1,14 @@
+{id:'cron',name:'Cron 解析',icon:'⏰',cat:'dev',desc:'可视化 Cron 表达式',
+html(){return'<div class="t-row"><input class="t-in" id="cronIn" value="*/5 * * * *" style="flex:1"><button class="t-btn" id="cronParse">解析</button></div><div id="cronOut" class="t-res"></div><div style="font-size:.72em;color:#999;margin-top:4px">格式: 分(0-59) 时(0-23) 日(1-31) 月(1-12) 周(0-7)</div>'},
+init(el){
+  const N=[['分钟',60],['小时',24],['日',31],['月',12],['星期',7]];
+  function desc(v,i){const name=N[i][0];if(v==='*')return'每'+name;if(v.startsWith('*/'))return'每隔 '+v.slice(2)+' '+name;if(v.includes(','))return name+' 为 '+v;if(v.includes('-')){const[a,b]=v.split('-');return name+' '+a+' 至 '+b}return name+' 为 '+v}
+  function go(){
+    const p=el.querySelector('#cronIn').value.trim().split(/\s+/);
+    if(p.length<5){el.querySelector('#cronOut').textContent='需要 5 个字段';return}
+    const lines=p.slice(0,5).map((v,i)=>desc(v,i));
+    el.querySelector('#cronOut').textContent='含义:\n'+lines.join('\n')+'\n\n→ '+lines.join('，');
+  }
+  el.querySelector('#cronParse').onclick=go;
+  el.querySelector('#cronIn').addEventListener('keydown',e=>{if(e.key==='Enter')go()});
+}}

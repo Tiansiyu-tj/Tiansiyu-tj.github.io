@@ -1,0 +1,423 @@
+{id:'pde',name:'PDE 求解',icon:'∇²',cat:'academic',desc:'椭圆 · 抛物 · 双曲 · SOR · 热力图动画',
+html(){return '<div class="t-row" id="pdeTabs" style="margin-bottom:8px">'+
+'<button class="t-btn" data-tab="elliptic" style="font-weight:700">椭圆型</button>'+
+'<button class="t-btn t-btn-o" data-tab="parabolic">抛物型</button>'+
+'<button class="t-btn t-btn-o" data-tab="hyperbolic">双曲型</button></div>'+
+'<div id="pdeElliptic"><div class="t-row"><label class="t-lbl">源项 f(x,y)</label>'+
+'<input class="t-in" id="pdeFExpr" value="0" placeholder="0 = Laplace"></div>'+
+'<div class="t-row"><label class="t-lbl">域 Lx×Ly</label>'+
+'<input class="t-in" id="pdeLx" value="1" style="width:60px"> × '+
+'<input class="t-in" id="pdeLy" value="1" style="width:60px"></div>'+
+'<div class="t-row"><label class="t-lbl">网格 N=<span id="pdeNVal">40</span></label>'+
+'<input type="range" id="pdeN" min="10" max="200" value="40" style="flex:1"></div>'+
+'<div class="t-row"><label class="t-lbl">边界(Dirichlet)</label>'+
+'上<input class="t-in" id="pdeBT" value="100" style="width:50px"> '+
+'下<input class="t-in" id="pdeBB" value="0" style="width:50px"> '+
+'左<input class="t-in" id="pdeBL" value="0" style="width:50px"> '+
+'右<input class="t-in" id="pdeBR" value="0" style="width:50px"></div>'+
+'<div class="t-row"><label class="t-lbl">方法</label>'+
+'<label><input type="radio" name="pdeMethod" value="jacobi" checked> Jacobi</label> '+
+'<label><input type="radio" name="pdeMethod" value="gs"> Gauss-Seidel</label> '+
+'<label><input type="radio" name="pdeMethod" value="sor"> SOR</label></div>'+
+'<div class="t-row" id="pdeSorRow" style="display:none"><label class="t-lbl">ω=<span id="pdeOmVal">1.50</span></label>'+
+'<input type="range" id="pdeOmega" min="100" max="200" value="150" style="flex:1"></div>'+
+'<div class="t-row"><label class="t-lbl">最大迭代</label><input class="t-in" id="pdeMaxIt" value="10000" style="width:80px">'+
+' <label class="t-lbl">容差</label><input class="t-in" id="pdeTol" value="1e-6" style="width:80px"></div>'+
+'<div class="t-row"><button class="t-btn" id="pdeSolveE">求解</button>'+
+'<button class="t-btn t-btn-o" id="pdePreE1">热板</button>'+
+'<button class="t-btn t-btn-o" id="pdePreE2">对角加热</button></div>'+
+'<div id="pdeEInfo" class="t-res" style="display:none"></div>'+
+'<canvas class="t-cv" id="pdeHeat" style="width:100%;max-width:450px;height:300px;display:none"></canvas>'+
+'<canvas class="t-cv" id="pdeConv" style="width:100%;max-width:450px;height:150px;display:none"></canvas></div>'+
+'<div id="pdeParabolic" style="display:none">'+
+'<div class="t-row"><label class="t-lbl">扩散系数 α</label><input class="t-in" id="pdeAlpha" value="0.01" style="width:80px">'+
+' <label class="t-lbl">域</label><input class="t-in" id="pdePLx" value="1" style="width:50px">×'+
+'<input class="t-in" id="pdePLy" value="1" style="width:50px"></div>'+
+'<div class="t-row"><label class="t-lbl">网格 N=<span id="pdePNVal">30</span></label>'+
+'<input type="range" id="pdePNN" min="10" max="150" value="30" style="flex:1"></div>'+
+'<div class="t-row"><label class="t-lbl">初始条件</label>'+
+'<select class="t-sel" id="pdeIC"><option value="gauss">中心热斑</option><option value="step">左热右冷</option></select></div>'+
+'<div class="t-row"><label class="t-lbl">边界</label>'+
+'上<input class="t-in" id="pdePBT" value="0" style="width:45px"> '+
+'下<input class="t-in" id="pdePBB" value="0" style="width:45px"> '+
+'左<input class="t-in" id="pdePBL" value="0" style="width:45px"> '+
+'右<input class="t-in" id="pdePBR" value="0" style="width:45px"></div>'+
+'<div class="t-row"><label class="t-lbl">方法</label>'+
+'<label><input type="radio" name="pdePMethod" value="ftcs" checked> FTCS</label> '+
+'<label><input type="radio" name="pdePMethod" value="cn"> Crank-Nicolson</label></div>'+
+'<div class="t-row"><label class="t-lbl">dt</label><input class="t-in" id="pdeDt" value="0.0001" style="width:80px">'+
+' <label class="t-lbl">总时间 T</label><input class="t-in" id="pdeTT" value="0.5" style="width:80px"></div>'+
+'<div id="pdeCFL" style="display:none;color:#e6a23c;font-size:12px;margin:4px 0"></div>'+
+'<div class="t-row" style="flex-wrap:wrap"><button class="t-btn" id="pdePPlay">▶ Play</button>'+
+'<button class="t-btn t-btn-o" id="pdePPause" disabled>⏸</button>'+
+'<button class="t-btn t-btn-o" id="pdePReset">Reset</button></div>'+
+'<div id="pdePInfo" class="t-res" style="display:none"></div>'+
+'<canvas class="t-cv" id="pdePHeat" style="width:100%;max-width:450px;height:300px;display:none"></canvas></div>'+
+'<div id="pdeHyperbolic" style="display:none">'+
+'<div class="t-row"><label class="t-lbl">波速 c</label><input class="t-in" id="pdeC" value="1.0" style="width:80px">'+
+' <label class="t-lbl">域</label><input class="t-in" id="pdeHLx" value="1" style="width:50px">×'+
+'<input class="t-in" id="pdeHLy" value="1" style="width:50px"></div>'+
+'<div class="t-row"><label class="t-lbl">网格 N=<span id="pdeHNVal">30</span></label>'+
+'<input type="range" id="pdeHNN" min="10" max="150" value="30" style="flex:1"></div>'+
+'<div class="t-row"><label class="t-lbl">初始位移</label>'+
+'<select class="t-sel" id="pdeHIC"><option value="center">中心脉冲</option><option value="corner">角脉冲</option></select></div>'+
+'<div class="t-row"><label class="t-lbl">dt</label><input class="t-in" id="pdeHDt" value="0.001" style="width:80px">'+
+' <label class="t-lbl">总时间 T</label><input class="t-in" id="pdeHT" value="2.0" style="width:80px"></div>'+
+'<div id="pdeHCFL" style="display:none;color:#e6a23c;font-size:12px;margin:4px 0"></div>'+
+'<div class="t-row" style="flex-wrap:wrap"><button class="t-btn" id="pdeHPlay">▶ Play</button>'+
+'<button class="t-btn t-btn-o" id="pdeHPause" disabled>⏸</button>'+
+'<button class="t-btn t-btn-o" id="pdeHReset">Reset</button></div>'+
+'<div id="pdeHInfo" class="t-res" style="display:none"></div>'+
+'<canvas class="t-cv" id="pdeHHeat" style="width:100%;max-width:450px;height:300px;display:none"></canvas></div>'},
+async init(el){
+  var q=function(s){return el.querySelector(s)};
+  var qa=function(s){return el.querySelectorAll(s)};
+  var cs=getComputedStyle(document.documentElement);
+  var C_ACCENT=cs.getPropertyValue('--accent').trim()||'#5B8BA4';
+  var C_FONT1=cs.getPropertyValue('--font-color-1').trim()||'#333';
+  var C_FONT3=cs.getPropertyValue('--font-color-3').trim()||'#999';
+  var C_BORDER=cs.getPropertyValue('--border-warm').trim()||'#ccc';
+  var animId=null,animTimeout=null,running=false;
+  function stopAnim(){running=false;if(animId){cancelAnimationFrame(animId);animId=null;}
+    if(animTimeout){clearTimeout(animTimeout);animTimeout=null;}}
+  el._cleanup=function(){stopAnim()};
+
+  /* --- jet colormap --- */
+  function jetColor(t){var r,g,b;
+    if(t<0.25){r=0;g=Math.round(255*t*4);b=255}
+    else if(t<0.5){r=0;g=255;b=Math.round(255*(1-(t-0.25)*4))}
+    else if(t<0.75){r=Math.round(255*(t-0.5)*4);g=255;b=0}
+    else{r=255;g=Math.round(255*(1-(t-0.75)*4));b=0}
+    return [r,g,b]}
+
+  /* --- DPR setup --- */
+  function setupCanvas(cv,w,h){var dpr=window.devicePixelRatio||1;
+    cv.width=w*dpr;cv.height=h*dpr;cv.style.width=w+'px';cv.style.height=h+'px';
+    return dpr}
+
+  /* --- colorbar --- */
+  function drawColorbar(ctx,x,y,w,h,vmin,vmax){
+    for(var i=0;i<h;i++){var t=1-i/h;var c=jetColor(t);
+      ctx.fillStyle='rgb('+c[0]+','+c[1]+','+c[2]+')';ctx.fillRect(x,y+i,w-15,1)}
+    ctx.fillStyle=C_FONT1;ctx.font='11px sans-serif';ctx.textAlign='left';
+    ctx.fillText(vmax.toPrecision(3),x+w-14,y+10);
+    ctx.fillText(vmin.toPrecision(3),x+w-14,y+h-2);
+    ctx.fillText(((vmin+vmax)/2).toPrecision(3),x+w-14,y+h/2+4)}
+
+  /* --- heatmap render --- */
+  function renderHeatmap(canvas,u,N,vmin,vmax){
+    var dpr=window.devicePixelRatio||1;var ctx=canvas.getContext('2d');
+    var W=canvas.width,H=canvas.height;var padR=60;
+    var plotW=W/dpr-padR,plotH=H/dpr;
+    var tmp=document.createElement('canvas');tmp.width=N;tmp.height=N;
+    var tctx=tmp.getContext('2d');var img=tctx.createImageData(N,N);
+    var range=vmax-vmin||1;
+    for(var j=0;j<N;j++){for(var i=0;i<N;i++){
+      var t=(u[j][i]-vmin)/range;t=Math.max(0,Math.min(1,t));
+      var rgb=jetColor(t);var idx=(j*N+i)*4;
+      img.data[idx]=rgb[0];img.data[idx+1]=rgb[1];img.data[idx+2]=rgb[2];img.data[idx+3]=255}}
+    tctx.putImageData(img,0,0);
+    ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W/dpr,H/dpr);
+    ctx.imageSmoothingEnabled=false;ctx.drawImage(tmp,0,0,plotW,plotH);
+    drawColorbar(ctx,plotW+5,0,padR-5,plotH,vmin,vmax)}
+
+  /* --- convergence curve --- */
+  function drawConvCurve(canvas,residuals){
+    var dpr=window.devicePixelRatio||1;var ctx=canvas.getContext('2d');
+    var W=canvas.width/dpr,H=canvas.height/dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+    if(residuals.length<2)return;
+    var pad=40;var pw=W-pad-10,ph=H-pad-10;
+    var logs=[];for(var i=0;i<residuals.length;i++){
+      var v=residuals[i]>0?Math.log10(residuals[i]):-16;logs.push(v)}
+    var ymin=logs[logs.length-1],ymax=logs[0];
+    if(ymin>=ymax)ymax=ymin+1;
+    ctx.strokeStyle=C_BORDER;ctx.lineWidth=0.5;ctx.beginPath();
+    ctx.moveTo(pad,5);ctx.lineTo(pad,H-pad);ctx.lineTo(W-5,H-pad);ctx.stroke();
+    ctx.fillStyle=C_FONT3;ctx.font='10px sans-serif';ctx.textAlign='right';
+    for(var k=0;k<=4;k++){var yv=ymax+(ymin-ymax)*k/4;
+      var yy=5+ph*k/4;ctx.fillText(yv.toFixed(1),pad-3,yy+3);
+      ctx.beginPath();ctx.moveTo(pad,yy);ctx.lineTo(W-5,yy);ctx.stroke()}
+    ctx.textAlign='center';
+    ctx.fillText('0',pad,H-pad+12);ctx.fillText(''+(residuals.length-1),W-5,H-pad+12);
+    ctx.strokeStyle=C_ACCENT;ctx.lineWidth=1.5;ctx.beginPath();
+    var step=Math.max(1,Math.floor(logs.length/pw));
+    for(var i=0;i<logs.length;i+=step){
+      var xx=pad+pw*i/(logs.length-1);var yy=5+ph*(logs[i]-ymax)/(ymin-ymax);
+      if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy)}
+    ctx.stroke()}
+
+  /* --- 2D array creation --- */
+  function make2D(n,val){var a=[];for(var j=0;j<n;j++){
+    var row=[];for(var i=0;i<n;i++)row.push(val);a.push(row)}return a}
+  function copy2D(a){var b=[];for(var j=0;j<a.length;j++)b.push(a[j].slice());return b}
+  function minMax(u,N){var mn=Infinity,mx=-Infinity;
+    for(var j=0;j<N;j++)for(var i=0;i<N;i++){if(u[j][i]<mn)mn=u[j][i];if(u[j][i]>mx)mx=u[j][i]}
+    return [mn,mx]}
+
+  /* --- Tab switching --- */
+  var tabs=qa('#pdeTabs button');var panels={elliptic:q('#pdeElliptic'),parabolic:q('#pdeParabolic'),hyperbolic:q('#pdeHyperbolic')};
+  var curTab='elliptic';
+  function switchTab(t){stopAnim();curTab=t;
+    for(var i=0;i<tabs.length;i++){var b=tabs[i];
+      if(b.dataset.tab===t){b.style.fontWeight='700';b.className='t-btn'}
+      else{b.style.fontWeight='';b.className='t-btn t-btn-o'}}
+    for(var k in panels)panels[k].style.display=k===t?'':'none'}
+  for(var i=0;i<tabs.length;i++){tabs[i].addEventListener('click',function(){switchTab(this.dataset.tab)})}
+
+  /* --- Elliptic sliders --- */
+  var nSlider=q('#pdeN'),nVal=q('#pdeNVal');
+  nSlider.addEventListener('input',function(){nVal.textContent=this.value});
+  var omSlider=q('#pdeOmega'),omVal=q('#pdeOmVal'),sorRow=q('#pdeSorRow');
+  omSlider.addEventListener('input',function(){omVal.textContent=(this.value/100).toFixed(2)});
+  var radios=qa('input[name="pdeMethod"]');
+  for(var i=0;i<radios.length;i++){radios[i].addEventListener('change',function(){
+    sorRow.style.display=this.value==='sor'?'flex':'none'})}
+
+  /* --- Elliptic presets --- */
+  q('#pdePreE1').addEventListener('click',function(){
+    q('#pdeBT').value='100';q('#pdeBB').value='0';q('#pdeBL').value='0';q('#pdeBR').value='0';q('#pdeFExpr').value='0'});
+  q('#pdePreE2').addEventListener('click',function(){
+    q('#pdeBT').value='100';q('#pdeBB').value='0';q('#pdeBL').value='0';q('#pdeBR').value='50';q('#pdeFExpr').value='0'});
+
+  /* --- Elliptic solve --- */
+  q('#pdeSolveE').addEventListener('click',async function(){
+    stopAnim();
+    var N=parseInt(nSlider.value);var Lx=parseFloat(q('#pdeLx').value)||1;
+    var Ly=parseFloat(q('#pdeLy').value)||1;
+    var bT=parseFloat(q('#pdeBT').value)||0,bB=parseFloat(q('#pdeBB').value)||0;
+    var bL=parseFloat(q('#pdeBL').value)||0,bR=parseFloat(q('#pdeBR').value)||0;
+    var hx=Lx/(N-1),hy=Ly/(N-1),h=hx,hx2=hx*hx,hy2=hy*hy,denom2=2/hx2+2/hy2;
+    var maxIt=parseInt(q('#pdeMaxIt').value)||10000;
+    var tol=parseFloat(q('#pdeTol').value)||1e-6;
+    var method='jacobi';for(var i=0;i<radios.length;i++){if(radios[i].checked)method=radios[i].value}
+    var omega=parseFloat(omSlider.value)/100;
+    var fExpr=q('#pdeFExpr').value.trim();var hasSrc=fExpr&&fExpr!=='0';
+    var fFunc=null;
+    if(hasSrc){try{var m=await loadMath();var node=m.parse(fExpr);var compiled=node.compile();
+      fFunc=function(x,y){return compiled.evaluate({x:x,y:y})}}
+      catch(e){q('#pdeEInfo').style.display='block';q('#pdeEInfo').innerHTML='<span style="color:#f56c6c">表达式错误: '+e.message+'</span>';return}}
+
+    var u=make2D(N,0);
+    /* Boundary */
+    for(var i=0;i<N;i++){u[0][i]=bT;u[N-1][i]=bB;u[i][0]=bL;u[i][N-1]=bR}
+
+    var cvH=q('#pdeHeat');var cvC=q('#pdeConv');
+    cvH.style.display='block';cvC.style.display='block';
+    var dpr=setupCanvas(cvH,Math.min(450,el.clientWidth-20),300);
+    setupCanvas(cvC,Math.min(450,el.clientWidth-20),150);
+
+    var info=q('#pdeEInfo');info.style.display='block';info.textContent='求解中...';
+    var t0=performance.now();var residuals=[];
+
+    var batchSize=N<=50?maxIt:500;
+    var iter=0;var converged=false;
+
+    function solveBatch(){
+      var bEnd=Math.min(iter+batchSize,maxIt);
+      for(;iter<bEnd;iter++){
+        var maxRes=0;
+        if(method==='jacobi'){
+          var uNew=copy2D(u);
+          for(var j=1;j<N-1;j++){for(var i=1;i<N-1;i++){
+            var fv=fFunc?fFunc(i*hx,j*hy):0;
+            uNew[j][i]=((u[j][i-1]+u[j][i+1])/hx2+(u[j-1][i]+u[j+1][i])/hy2-fv)/denom2;
+            var d=Math.abs(uNew[j][i]-u[j][i]);if(d>maxRes)maxRes=d}}
+          u=uNew;
+        }else{
+          for(var j=1;j<N-1;j++){for(var i=1;i<N-1;i++){
+            var fv=fFunc?fFunc(i*hx,j*hy):0;
+            var gs=((u[j][i-1]+u[j][i+1])/hx2+(u[j-1][i]+u[j+1][i])/hy2-fv)/denom2;
+            var newVal=method==='sor'?(1-omega)*u[j][i]+omega*gs:gs;
+            var d=Math.abs(newVal-u[j][i]);if(d>maxRes)maxRes=d;u[j][i]=newVal}}}
+        if(iter%50===0)residuals.push(maxRes);
+        if(maxRes<tol){converged=true;residuals.push(maxRes);break}}
+      var mm=minMax(u,N);renderHeatmap(cvH,u,N,mm[0],mm[1]);drawConvCurve(cvC,residuals);
+      var elapsed=(performance.now()-t0).toFixed(1);
+      if(converged||iter>=maxIt){
+        var last=residuals[residuals.length-1];
+        info.innerHTML=(converged?'<span style="color:#67c23a">收敛</span>':'<span style="color:#e6a23c">未收敛</span>')+
+          ' | 迭代: '+iter+' | 残差: '+last.toExponential(2)+' | 耗时: '+elapsed+'ms';
+      }else{info.textContent='迭代: '+iter+'/'+maxIt+' ...';animTimeout=setTimeout(solveBatch,0)}}
+    solveBatch()});
+
+  /* ===== Parabolic ===== */
+  var pnSlider=q('#pdePNN'),pnVal=q('#pdePNVal');
+  pnSlider.addEventListener('input',function(){pnVal.textContent=this.value});
+
+  function makeIC_P(N,Lx,Ly,type){
+    var u=make2D(N,0);var hx=Lx/(N-1),hy=Ly/(N-1);
+    for(var j=1;j<N-1;j++){for(var i=1;i<N-1;i++){
+      var x=i*hx,y=j*hy;
+      if(type==='gauss')u[j][i]=Math.exp(-((x-Lx/2)*(x-Lx/2)+(y-Ly/2)*(y-Ly/2))/0.04)*100;
+      else if(type==='step')u[j][i]=x<0.3*Lx?100:0}}
+    return u}
+
+  function applyBC_P(u,N,bt,bb,bl,br){
+    for(var i=0;i<N;i++){u[0][i]=bt;u[N-1][i]=bb}
+    for(var j=0;j<N;j++){u[j][0]=bl;u[j][N-1]=br}}
+
+  function checkCFL_P(){
+    var alpha=parseFloat(q('#pdeAlpha').value)||0.01;
+    var N=parseInt(pnSlider.value);var Lx=parseFloat(q('#pdePLx').value)||1;
+    var h=Lx/(N-1);var dt=parseFloat(q('#pdeDt').value)||0.0001;
+    var r=alpha*dt/(h*h);var cfl=q('#pdeCFL');
+    if(r>0.25){cfl.style.display='block';cfl.style.color='#e6a23c';cfl.textContent='⚠ CFL: r=α·dt/h²='+r.toFixed(4)+' > 0.25，FTCS 可能不稳定'}
+    else{cfl.style.display='block';cfl.style.color='#67c23a';cfl.textContent='CFL: r='+r.toFixed(4)+' ≤ 0.25 ✓'}}
+
+  q('#pdeAlpha').addEventListener('input',checkCFL_P);q('#pdeDt').addEventListener('input',checkCFL_P);
+  pnSlider.addEventListener('input',function(){pnVal.textContent=this.value;checkCFL_P()});
+
+  var pState={u:null,t:0,cMin:0,cMax:100};
+
+  function initParabolic(){
+    stopAnim();
+    var N=parseInt(pnSlider.value);var Lx=parseFloat(q('#pdePLx').value)||1;
+    var Ly=parseFloat(q('#pdePLy').value)||1;
+    var ic=q('#pdeIC').value;
+    pState.u=makeIC_P(N,Lx,Ly,ic);
+    var bt=parseFloat(q('#pdePBT').value)||0,bb=parseFloat(q('#pdePBB').value)||0;
+    var bl=parseFloat(q('#pdePBL').value)||0,br=parseFloat(q('#pdePBR').value)||0;
+    applyBC_P(pState.u,N,bt,bb,bl,br);pState.t=0;
+    var mm=minMax(pState.u,N);pState.cMin=mm[0];pState.cMax=mm[1];
+    var cvP=q('#pdePHeat');cvP.style.display='block';
+    setupCanvas(cvP,Math.min(450,el.clientWidth-20),300);
+    renderHeatmap(cvP,pState.u,N,pState.cMin,pState.cMax);
+    var info=q('#pdePInfo');info.style.display='block';info.textContent='t=0.000';
+    q('#pdePPlay').disabled=false;q('#pdePPause').disabled=true;checkCFL_P()}
+
+  function stepFTCS(u,N,alpha,dt,h){
+    var r=alpha*dt/(h*h);var uNew=copy2D(u);
+    for(var j=1;j<N-1;j++){for(var i=1;i<N-1;i++){
+      uNew[j][i]=u[j][i]+r*(u[j-1][i]+u[j+1][i]+u[j][i-1]+u[j][i+1]-4*u[j][i])}}
+    return uNew}
+
+  function stepCN(u,N,alpha,dt,h){
+    var r=alpha*dt/(2*h*h);var uNew=copy2D(u);var denom=1+4*r;
+    for(var k=0;k<200;k++){var uTmp=copy2D(uNew);var maxDiff=0;
+      for(var j=1;j<N-1;j++){for(var i=1;i<N-1;i++){
+        var lapOld=u[j-1][i]+u[j+1][i]+u[j][i-1]+u[j][i+1]-4*u[j][i];
+        var lapNew=uTmp[j-1][i]+uTmp[j+1][i]+uTmp[j][i-1]+uTmp[j][i+1];
+        var newVal=(u[j][i]+r*lapOld+r*lapNew)/denom;
+        var d=Math.abs(newVal-uNew[j][i]);if(d>maxDiff)maxDiff=d;
+        uNew[j][i]=newVal}}
+      if(maxDiff<1e-8)break}
+    return uNew}
+
+  function runParabolic(){
+    var N=parseInt(pnSlider.value);var alpha=parseFloat(q('#pdeAlpha').value)||0.01;
+    var Lx=parseFloat(q('#pdePLx').value)||1;var h=Lx/(N-1);
+    var dt=parseFloat(q('#pdeDt').value)||0.0001;var T=parseFloat(q('#pdeTT').value)||0.5;
+    var method='ftcs';var rads=qa('input[name="pdePMethod"]');
+    for(var i=0;i<rads.length;i++){if(rads[i].checked)method=rads[i].value}
+    var bt=parseFloat(q('#pdePBT').value)||0,bb=parseFloat(q('#pdePBB').value)||0;
+    var bl=parseFloat(q('#pdePBL').value)||0,br=parseFloat(q('#pdePBR').value)||0;
+    var stepsPerFrame=Math.max(1,Math.min(20,Math.round(0.005/dt)));
+    var cvP=q('#pdePHeat');var info=q('#pdePInfo');
+    running=true;q('#pdePPlay').disabled=true;q('#pdePPause').disabled=false;
+
+    function frame(){if(!running)return;
+      for(var s=0;s<stepsPerFrame&&pState.t<T;s++){
+        pState.u=method==='ftcs'?stepFTCS(pState.u,N,alpha,dt,h):stepCN(pState.u,N,alpha,dt,h);
+        applyBC_P(pState.u,N,bt,bb,bl,br);pState.t+=dt}
+      var mm=minMax(pState.u,N);renderHeatmap(cvP,pState.u,N,pState.cMin,pState.cMax);
+      info.textContent='t='+pState.t.toFixed(4)+' / '+T;
+      if(pState.t>=T){running=false;q('#pdePPlay').disabled=false;q('#pdePPause').disabled=true;
+        q('#pdePPlay').textContent='▶ Replay';
+        info.textContent='完成 t='+T;return}
+      animId=requestAnimationFrame(frame)}
+    frame()}
+
+  q('#pdePPlay').addEventListener('click',function(){
+    if(!pState.u||pState.t>=parseFloat(q('#pdeTT').value)){initParabolic()}
+    q('#pdePPlay').textContent='▶ Play';
+    runParabolic()});
+  q('#pdePPause').addEventListener('click',function(){stopAnim();q('#pdePPlay').disabled=false;q('#pdePPause').disabled=true});
+  q('#pdePReset').addEventListener('click',initParabolic);
+
+  /* ===== Hyperbolic ===== */
+  var hnSlider=q('#pdeHNN'),hnVal=q('#pdeHNVal');
+  hnSlider.addEventListener('input',function(){hnVal.textContent=this.value});
+
+
+  function makeIC_H(N,Lx,Ly,type){
+    var u=make2D(N,0);var hx=Lx/(N-1),hy=Ly/(N-1);
+    for(var j=1;j<N-1;j++){for(var i=1;i<N-1;i++){
+      var x=i*hx,y=j*hy;
+      if(type==='center')u[j][i]=Math.exp(-((x-Lx/2)*(x-Lx/2)+(y-Ly/2)*(y-Ly/2))/0.005);
+      else u[j][i]=Math.exp(-((x-0.1*Lx)*(x-0.1*Lx)+(y-0.1*Ly)*(y-0.1*Ly))/0.005)}}
+    return u}
+
+  function checkCFL_H(){
+    var c=parseFloat(q('#pdeC').value)||1;var N=parseInt(hnSlider.value);
+    var Lx=parseFloat(q('#pdeHLx').value)||1;var h=Lx/(N-1);
+    var dt=parseFloat(q('#pdeHDt').value)||0.001;
+    var cfl=c*dt/h;var limit=1/Math.sqrt(2);var el2=q('#pdeHCFL');
+    if(cfl>limit){el2.style.display='block';el2.style.color='#e6a23c';
+      el2.textContent='⚠ CFL: c·dt/h='+cfl.toFixed(4)+' > 1/√2≈'+limit.toFixed(4)+'，不稳定'}
+    else{el2.style.display='block';el2.style.color='#67c23a';
+      el2.textContent='CFL: c·dt/h='+cfl.toFixed(4)+' ≤ 1/√2 ✓'}}
+
+  q('#pdeC').addEventListener('input',checkCFL_H);q('#pdeHDt').addEventListener('input',checkCFL_H);
+  hnSlider.addEventListener('input',function(){hnVal.textContent=this.value;checkCFL_H()});
+
+  var hState={u:null,uPrev:null,t:0};
+
+  function initHyperbolic(){
+    stopAnim();
+    var N=parseInt(hnSlider.value);var Lx=parseFloat(q('#pdeHLx').value)||1;
+    var Ly=parseFloat(q('#pdeHLy').value)||1;var ic=q('#pdeHIC').value;
+    var c=parseFloat(q('#pdeC').value)||1;var dt=parseFloat(q('#pdeHDt').value)||0.001;
+    var h=Lx/(N-1);var r2=(c*dt/h)*(c*dt/h);
+    hState.u=makeIC_H(N,Lx,Ly,ic);
+    /* First step: u1 = u0 + dt*v0 + 0.5*r²*Lap(u0), v0=0 */
+    var u1=make2D(N,0);
+    for(var j=1;j<N-1;j++){for(var i=1;i<N-1;i++){
+      var lap=hState.u[j-1][i]+hState.u[j+1][i]+hState.u[j][i-1]+hState.u[j][i+1]-4*hState.u[j][i];
+      u1[j][i]=hState.u[j][i]+0.5*r2*lap}}
+    hState.uPrev=hState.u;hState.u=u1;hState.t=dt;
+    var cvH=q('#pdeHHeat');cvH.style.display='block';
+    setupCanvas(cvH,Math.min(450,el.clientWidth-20),300);
+    var mm=minMax(hState.u,N);renderHeatmap(cvH,hState.u,N,mm[0],mm[1]);
+    var info=q('#pdeHInfo');info.style.display='block';info.textContent='t=0.000';
+    q('#pdeHPlay').disabled=false;q('#pdeHPause').disabled=true;checkCFL_H()}
+
+  function runHyperbolic(){
+    var N=parseInt(hnSlider.value);var c=parseFloat(q('#pdeC').value)||1;
+    var Lx=parseFloat(q('#pdeHLx').value)||1;var h=Lx/(N-1);
+    var dt=parseFloat(q('#pdeHDt').value)||0.001;var T=parseFloat(q('#pdeHT').value)||2;
+    var r2=(c*dt/h)*(c*dt/h);
+    var stepsPerFrame=Math.max(1,Math.min(20,Math.round(0.01/dt)));
+    var cvH=q('#pdeHHeat');var info=q('#pdeHInfo');
+    running=true;q('#pdeHPlay').disabled=true;q('#pdeHPause').disabled=false;
+    /* track global min/max for stable color range */
+    var gMin=Infinity,gMax=-Infinity;
+    var mmInit=minMax(hState.u,N);gMin=mmInit[0];gMax=mmInit[1];
+
+    function frame(){if(!running)return;
+      for(var s=0;s<stepsPerFrame&&hState.t<T;s++){
+        var uNext=make2D(N,0);
+        for(var j=1;j<N-1;j++){for(var i=1;i<N-1;i++){
+          var lap=hState.u[j-1][i]+hState.u[j+1][i]+hState.u[j][i-1]+hState.u[j][i+1]-4*hState.u[j][i];
+          uNext[j][i]=2*hState.u[j][i]-hState.uPrev[j][i]+r2*lap}}
+        hState.uPrev=hState.u;hState.u=uNext;hState.t+=dt}
+      var mm=minMax(hState.u,N);
+      if(mm[0]<gMin)gMin=mm[0];if(mm[1]>gMax)gMax=mm[1];
+      renderHeatmap(cvH,hState.u,N,gMin,gMax);
+      info.textContent='t='+hState.t.toFixed(4)+' / '+T;
+      if(hState.t>=T){running=false;q('#pdeHPlay').disabled=false;q('#pdeHPause').disabled=true;
+        q('#pdeHPlay').textContent='▶ Replay';
+        info.textContent='完成 t='+T.toFixed(3);return}
+      animId=requestAnimationFrame(frame)}
+    frame()}
+
+  q('#pdeHPlay').addEventListener('click',function(){
+    if(!hState.u||hState.t>=parseFloat(q('#pdeHT').value)){initHyperbolic()}
+    q('#pdeHPlay').textContent='▶ Play';
+    runHyperbolic()});
+  q('#pdeHPause').addEventListener('click',function(){stopAnim();q('#pdeHPlay').disabled=false;q('#pdeHPause').disabled=true});
+  q('#pdeHReset').addEventListener('click',initHyperbolic);
+
+  /* --- init default view --- */
+  checkCFL_P();checkCFL_H();
+}}

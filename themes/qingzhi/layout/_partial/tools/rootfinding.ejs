@@ -1,0 +1,224 @@
+{id:'rootfinding',name:'方程求根',icon:'🎯',cat:'academic',desc:'二分法 · 牛顿法 · 弦割法 · 迭代可视化',
+html(){return '<div class="t-lbl">f(x) = 0</div>'
++'<div class="t-row"><input class="t-in" id="rfExpr" value="x^3 - x - 2" style="flex:1" placeholder="如 x^3 - x - 2, sin(x) - 0.5"></div>'
++'<div class="t-lbl" style="margin-top:8px">求解方法</div>'
++'<div class="t-row" style="gap:4px;flex-wrap:wrap">'
++'<button class="t-btn rf-method" data-m="bisect" style="font-weight:700">二分法</button>'
++'<button class="t-btn t-btn-o rf-method" data-m="newton">牛顿法</button>'
++'<button class="t-btn t-btn-o rf-method" data-m="secant">弦割法</button></div>'
++'<div id="rfParams" style="margin-top:8px">'
++'<div id="rfBisect"><div class="t-row" style="gap:6px"><span class="t-lbl" style="margin:0">a =</span><input class="t-in" id="rfA" value="1" style="width:70px"><span class="t-lbl" style="margin:0">b =</span><input class="t-in" id="rfB" value="2" style="width:70px"></div></div>'
++'<div id="rfNewton" style="display:none"><div class="t-row" style="gap:6px"><span class="t-lbl" style="margin:0">x\u2080 =</span><input class="t-in" id="rfX0" value="1.5" style="width:70px"></div></div>'
++'<div id="rfSecant" style="display:none"><div class="t-row" style="gap:6px"><span class="t-lbl" style="margin:0">x\u2080 =</span><input class="t-in" id="rfS0" value="1" style="width:70px"><span class="t-lbl" style="margin:0">x\u2081 =</span><input class="t-in" id="rfS1" value="2" style="width:70px"></div></div>'
++'</div>'
++'<div class="t-row" style="gap:6px;margin-top:6px;flex-wrap:wrap"><span class="t-lbl" style="margin:0">\u03b5 =</span><input class="t-in" id="rfTol" value="1e-6" style="width:80px"><span class="t-lbl" style="margin:0">最大迭代</span><input class="t-in" id="rfMax" value="100" style="width:60px"><button class="t-btn t-btn-s" id="rfSolve">求解</button></div>'
++'<div id="rfResult" class="t-res" style="margin-top:8px;max-height:320px;overflow:auto"></div>'
++'<canvas id="rfCv" style="width:100%;height:200px;margin-top:8px;border-radius:8px;display:none"></canvas>'},
+async init(el){
+  var M=await loadMath();
+  var q=function(s){return el.querySelector(s)};
+  var curMethod='bisect';
+
+  /* method toggle */
+  el.querySelectorAll('.rf-method').forEach(function(btn){
+    btn.onclick=function(){
+      el.querySelectorAll('.rf-method').forEach(function(b){b.className='t-btn t-btn-o rf-method';b.style.fontWeight=''});
+      btn.className='t-btn rf-method';btn.style.fontWeight='700';
+      curMethod=btn.dataset.m;
+      q('#rfBisect').style.display=curMethod==='bisect'?'':'none';
+      q('#rfNewton').style.display=curMethod==='newton'?'':'none';
+      q('#rfSecant').style.display=curMethod==='secant'?'':'none';
+    };
+  });
+
+  /* safe eval via math.js */
+  function makeF(expr){
+    try{var node=M.compile(expr);return function(x){return node.evaluate({x:x})};}
+    catch(e){return null;}
+  }
+
+  /* numerical derivative */
+  function deriv(f,x){var h=1e-8;return(f(x+h)-f(x-h))/(2*h)}
+
+  /* bisection */
+  function bisect(f,a,b,tol,maxIt){
+    var hist=[];
+    if(f(a)*f(b)>0) return{err:'端点同号：f(a) 与 f(b) 符号相同，无法保证区间内有根'};
+    for(var i=0;i<maxIt;i++){
+      var c=(a+b)/2,fc=f(c);
+      var dx=i===0?Math.abs(b-a):Math.abs(b-a)/2;
+      hist.push({n:i,x:c,fx:fc,dx:dx});
+      if(Math.abs(fc)<tol||Math.abs(b-a)/2<tol) return{root:c,fx:fc,iter:i+1,hist:hist};
+      if(f(a)*fc<0) b=c; else a=c;
+    }
+    return{root:(a+b)/2,fx:f((a+b)/2),iter:maxIt,hist:hist,warn:'达到最大迭代次数，可能未收敛'};
+  }
+
+  /* newton-raphson */
+  function newton(f,x0,tol,maxIt){
+    var hist=[],x=x0;
+    for(var i=0;i<maxIt;i++){
+      var fx=f(x),fp=deriv(f,x);
+      if(Math.abs(fp)<1e-14) return{err:'导数为零：x = '+x.toFixed(8)+' 处 f\'(x) ≈ 0',hist:hist};
+      var x1=x-fx/fp;
+      var dx=Math.abs(x1-x);
+      hist.push({n:i,x:x,fx:fx,dx:dx});
+      if(Math.abs(fx)<tol||dx<tol) return{root:x1,fx:f(x1),iter:i+1,hist:hist};
+      x=x1;
+    }
+    return{root:x,fx:f(x),iter:maxIt,hist:hist,warn:'达到最大迭代次数，可能未收敛'};
+  }
+
+  /* secant */
+  function secant(f,x0,x1,tol,maxIt){
+    var hist=[];
+    for(var i=0;i<maxIt;i++){
+      var f0=f(x0),f1=f(x1);
+      if(Math.abs(f1-f0)<1e-14) return{err:'f(xₙ) ≈ f(xₙ₋₁)，弦割法分母趋近零',hist:hist};
+      var x2=x1-f1*(x1-x0)/(f1-f0);
+      var dx=Math.abs(x2-x1);
+      hist.push({n:i,x:x1,fx:f1,dx:dx});
+      if(Math.abs(f1)<tol||dx<tol) return{root:x2,fx:f(x2),iter:i+1,hist:hist};
+      x0=x1;x1=x2;
+    }
+    return{root:x1,fx:f(x1),iter:maxIt,hist:hist,warn:'达到最大迭代次数，可能未收敛'};
+  }
+
+  /* draw convergence curve on canvas */
+  function drawCurve(hist){
+    var cv=q('#rfCv');if(!hist||hist.length<2){cv.style.display='none';return;}
+    cv.style.display='block';
+    var dpr=window.devicePixelRatio||1;
+    var rect=cv.getBoundingClientRect();
+    var W=rect.width*dpr,H=200*dpr;
+    cv.width=W;cv.height=H;
+    var ctx=cv.getContext('2d');
+    ctx.scale(dpr,dpr);
+    var w=rect.width,h=200;
+
+    /* bg */
+    var bgColor=getComputedStyle(el).getPropertyValue('--bg-zebra').trim()||'#f8f9fa';
+    ctx.fillStyle=bgColor;ctx.fillRect(0,0,w,h);
+
+    var vals=hist.map(function(r){var v=Math.abs(r.fx);return v>0?Math.log10(v):-16});
+    var n=vals.length;
+    var ymin=Math.min.apply(null,vals),ymax=Math.max.apply(null,vals);
+    if(ymax-ymin<1){ymin-=1;ymax+=1;}
+    var pad={l:50,r:15,t:15,b:30};
+    var pw=w-pad.l-pad.r,ph=h-pad.t-pad.b;
+
+    /* axes */
+    ctx.strokeStyle='#ccc';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(pad.l,pad.t);ctx.lineTo(pad.l,h-pad.b);ctx.lineTo(w-pad.r,h-pad.b);ctx.stroke();
+
+    /* y ticks */
+    ctx.fillStyle=getComputedStyle(el).getPropertyValue('--font-color-3').trim()||'#999';
+    ctx.font='10px sans-serif';ctx.textAlign='right';ctx.textBaseline='middle';
+    var yStep=Math.max(1,Math.ceil((ymax-ymin)/5));
+    for(var y=Math.ceil(ymin);y<=Math.floor(ymax);y+=yStep){
+      var py=pad.t+ph*(1-(y-ymin)/(ymax-ymin));
+      ctx.fillText('1e'+y,pad.l-4,py);
+      ctx.beginPath();ctx.moveTo(pad.l,py);ctx.lineTo(w-pad.r,py);ctx.strokeStyle='#eee';ctx.stroke();
+    }
+
+    /* x ticks */
+    ctx.textAlign='center';ctx.textBaseline='top';
+    var xStep=Math.max(1,Math.floor(n/8));
+    for(var i=0;i<n;i+=xStep){
+      var px=pad.l+pw*i/(n-1);
+      ctx.fillText(hist[i].n,px,h-pad.b+4);
+    }
+
+    /* labels */
+    ctx.fillStyle=getComputedStyle(el).getPropertyValue('--font-color-3').trim()||'#999';
+    ctx.font='10px sans-serif';ctx.textAlign='center';
+    ctx.fillText('迭代次数 n',w/2,h-4);
+    ctx.save();ctx.translate(10,h/2);ctx.rotate(-Math.PI/2);ctx.fillText('|f(xₙ)|',0,0);ctx.restore();
+
+    /* line */
+    var accent=getComputedStyle(el).getPropertyValue('--accent').trim()||'#5B8BA4';
+    ctx.strokeStyle=accent;ctx.lineWidth=2;ctx.lineJoin='round';
+    ctx.beginPath();
+    for(var i=0;i<n;i++){
+      var px=pad.l+pw*i/(n-1);
+      var py=pad.t+ph*(1-(vals[i]-ymin)/(ymax-ymin));
+      if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+    }
+    ctx.stroke();
+
+    /* dots */
+    ctx.fillStyle=accent;
+    for(var i=0;i<n;i++){
+      var px=pad.l+pw*i/(n-1);
+      var py=pad.t+ph*(1-(vals[i]-ymin)/(ymax-ymin));
+      ctx.beginPath();ctx.arc(px,py,3,0,Math.PI*2);ctx.fill();
+    }
+  }
+
+  /* format number */
+  function fmt(v){if(v==null||isNaN(v))return'NaN';if(Math.abs(v)<1e-14)return'0';if(Math.abs(v)>1e6||Math.abs(v)<1e-4)return v.toExponential(8);return v.toFixed(8)}
+
+  /* solve */
+  q('#rfSolve').onclick=function(){
+    var expr=q('#rfExpr').value.trim();
+    var tol=parseFloat(q('#rfTol').value)||1e-6;
+    var maxIt=parseInt(q('#rfMax').value)||100;
+    var res=q('#rfResult');
+
+    var f=makeF(expr);
+    if(!f){res.innerHTML='<span style="color:var(--accent)">⚠ 无法解析表达式，请检查语法</span>';q('#rfCv').style.display='none';return;}
+
+    /* test f */
+    try{f(1);}catch(e){res.innerHTML='<span style="color:var(--accent)">⚠ 表达式求值出错：'+e.message+'</span>';q('#rfCv').style.display='none';return;}
+
+    var result;
+    var methodName='';
+    if(curMethod==='bisect'){
+      var a=parseFloat(q('#rfA').value),b=parseFloat(q('#rfB').value);
+      if(isNaN(a)||isNaN(b)){res.innerHTML='<span style="color:var(--accent)">⚠ 请输入有效的区间端点</span>';return;}
+      result=bisect(f,a,b,tol,maxIt);methodName='二分法';
+    }else if(curMethod==='newton'){
+      var x0=parseFloat(q('#rfX0').value);
+      if(isNaN(x0)){res.innerHTML='<span style="color:var(--accent)">⚠ 请输入有效的初始猜测</span>';return;}
+      result=newton(f,x0,tol,maxIt);methodName='牛顿法';
+    }else{
+      var s0=parseFloat(q('#rfS0').value),s1=parseFloat(q('#rfS1').value);
+      if(isNaN(s0)||isNaN(s1)){res.innerHTML='<span style="color:var(--accent)">⚠ 请输入有效的初始点</span>';return;}
+      result=secant(f,s0,s1,tol,maxIt);methodName='弦割法';
+    }
+
+    if(result.err){res.innerHTML='<span style="color:var(--accent)">⚠ '+result.err+'</span>';q('#rfCv').style.display='none';return;}
+
+    /* build output */
+    var html='<div style="margin-bottom:8px">';
+    html+='<b>'+methodName+'</b>';
+    if(result.warn) html+=' <span style="color:#e6a23c;font-size:.85em">⚠ '+result.warn+'</span>';
+    html+='</div>';
+    html+='<div style="display:grid;grid-template-columns:auto 1fr;gap:2px 12px;font-size:.9em;margin-bottom:10px">';
+    html+='<span style="color:var(--font-color-3)">x* =</span><span style="font-family:monospace">'+fmt(result.root)+'</span>';
+    html+='<span style="color:var(--font-color-3)">f(x*) =</span><span style="font-family:monospace">'+fmt(result.fx)+'</span>';
+    html+='<span style="color:var(--font-color-3)">迭代次数</span><span>'+result.iter+'</span>';
+    html+='</div>';
+
+    /* iteration table */
+    if(result.hist&&result.hist.length>0){
+      html+='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:.78em;font-family:monospace">';
+      html+='<thead><tr style="background:var(--bg-zebra,#f5f5f5);border-bottom:2px solid var(--border-warm,#e8e8e8)">'
+        +'<th style="padding:4px 8px;text-align:center">n</th>'
+        +'<th style="padding:4px 8px;text-align:right">x\u2099</th>'
+        +'<th style="padding:4px 8px;text-align:right">f(x\u2099)</th>'
+        +'<th style="padding:4px 8px;text-align:right">|x\u2099 \u2212 x\u2099\u208b\u2081|</th></tr></thead><tbody>';
+      result.hist.forEach(function(r,i){
+        var bg=i%2===0?'transparent':'var(--bg-zebra,#fafafa)';
+        html+='<tr style="background:'+bg+';border-bottom:1px solid var(--border-warm,#eee)">'
+          +'<td style="padding:3px 8px;text-align:center">'+r.n+'</td>'
+          +'<td style="padding:3px 8px;text-align:right">'+fmt(r.x)+'</td>'
+          +'<td style="padding:3px 8px;text-align:right">'+fmt(r.fx)+'</td>'
+          +'<td style="padding:3px 8px;text-align:right">'+fmt(r.dx)+'</td></tr>';
+      });
+      html+='</tbody></table></div>';
+    }
+    res.innerHTML=html;
+    drawCurve(result.hist);
+  };
+}}

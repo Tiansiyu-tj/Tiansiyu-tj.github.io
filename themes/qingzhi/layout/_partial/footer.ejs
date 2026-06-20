@@ -1,0 +1,71 @@
+<div class="site-footer">
+    <% if(path == 'index.html') { %>
+
+        <div class="sf-legal">
+            <% if(theme.indexInfo.allWordCount) { %>
+                全站 <%= totalcount(site) %> 字
+            <% } %>
+            <% if(theme.indexInfo.allWordCount && theme.indexInfo.allViewCount) { %> · <% } %>
+            <% if(theme.indexInfo.allViewCount) { %>
+                <span id="busuanzi_container_site_pv"><span id="busuanzi_value_site_pv"></span> 次访问</span>
+            <% } %>
+        </div>
+        <div class="sf-motto">© 2024-2026, Xi'an | 鲁ICP备2026005393号 · Hexo/A4</div>
+
+    <% } else { %>
+
+        <div class="sf-motto"><%= theme.post.footer %></div>
+        <div class="sf-legal">
+            <%- theme.footerLink.info %>
+            <% for (name in theme.footerLink) { %>
+                <% if(name != 'info') { %>
+                     · <a href="<%- url_for(theme.footerLink[name]) %>"><%= name %></a>
+                <% } %>
+            <% } %>
+            <% if(theme.post.themeInfo) { %>
+                 · <a href="https://hexo.io/zh-cn/index.html">Hexo</a>/<a href="https://github.com/yeliqin666/my_blog">晴纸</a>
+            <% } %>
+        </div>
+
+    <% } %>
+</div>
+
+<script defer src="<%- url_for('js/randomHeaderContent.js') %>"></script>
+<% if(theme.tool.returnToTop) { %>
+    <script defer src="<%- url_for('js/returnToTop.js') %>"></script>
+<% } %>
+<% if(theme.tool.returnToLast) { %>
+    <script defer src="<%- url_for('js/returnToLastPage.js') %>"></script>
+<% } %>
+<% if(theme.tool.leftToc) { %>
+    <script defer src="<%- url_for('js/toc.js') %>"></script>
+<% } %>
+
+<% if(is_post() || is_page()) { %>
+<script defer src="<%- url_for('js/codeBlock.js') %>"></script>
+<script defer src="<%- url_for('js/lightgallery/lightgallery.umd.min.js') %>"></script>
+<script defer src="<%- url_for('js/lightgallery/plugins/lg-thumbnail.umd.min.js') %>"></script>
+<script defer src="<%- url_for('js/lightgallery/plugins/lg-fullscreen.umd.min.js') %>"></script>
+<script defer src="<%- url_for('js/lightgallery/plugins/lg-zoom.umd.min.js') %>"></script>
+<script defer src="<%- url_for('js/lightgallery/plugins/lg-rotate.umd.min.js') %>"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    if(typeof lightGallery==='undefined')return;
+    var g=document.querySelector('.article-gallery');
+    if(!g||!g.querySelector('.gallery-item'))return;
+    lightGallery(g,{
+        selector:'.gallery-item',
+        plugins:[typeof lgThumbnail!=='undefined'?lgThumbnail:null,typeof lgFullscreen!=='undefined'?lgFullscreen:null,typeof lgZoom!=='undefined'?lgZoom:null,typeof lgRotate!=='undefined'?lgRotate:null].filter(Boolean),
+        thumbnail:<%= theme.lightgallery.thumbnail %>,
+        zoom:<%= theme.lightgallery.zoom %>,
+        rotate:<%= theme.lightgallery.rotate %>,
+        fullScreen:<%= theme.lightgallery.fullScreen %>,
+        zoomFromOrigin:true,actualSize:true,enableZoomAfter:300
+    });
+});
+</script>
+<% } %>
+
+<% if(theme.postInfo.viewCount) { %>
+    <script defer src="https://events.vercount.one/js"></script> 
+<% } %>

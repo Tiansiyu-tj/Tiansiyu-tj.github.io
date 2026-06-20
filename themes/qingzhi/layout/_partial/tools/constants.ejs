@@ -1,0 +1,13 @@
+{id:'constants',name:'物理常数',icon:'📏',cat:'academic',desc:'CODATA 标准值 · LaTeX 渲染',
+html(){return'<input class="t-in" id="constSearch" placeholder="搜索常数..." style="margin-bottom:8px"><div id="constBody" style="overflow:auto;max-height:420px"></div>'},
+async init(el){
+  await loadKaTeX();
+  var h='<table class="ct-table"><tr><th>符号</th><th>名称</th><th>数值</th><th>单位</th></tr>';
+  CONSTS.forEach(function(c){h+='<tr class="const-row"><td>'+tex(c[0])+'</td><td>'+c[1]+'</td><td>'+tex(c[2])+'</td><td>'+(c[3]?tex(c[3]):'—')+'</td></tr>'});
+  h+='</table>';
+  el.querySelector('#constBody').innerHTML=h;
+  el.querySelector('#constSearch').oninput=function(){
+    var q=this.value.toLowerCase();
+    el.querySelectorAll('.const-row').forEach(function(r){r.style.display=r.textContent.toLowerCase().includes(q)?'':'none'});
+  };
+}}

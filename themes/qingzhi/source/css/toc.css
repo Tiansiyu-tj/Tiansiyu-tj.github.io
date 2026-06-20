@@ -1,0 +1,143 @@
+/* =========================================
+   左侧浮动目录 (Table of Contents)
+   完全重写 — 替换旧版 text-indent 方案
+   使用 padding-left 分层 + ellipsis 截断
+   ========================================= */
+
+/* ── 容器 ── */
+.left-toc-container {
+    position: fixed;
+    top: 100px;
+    left: 24px;
+    bottom: 110px;
+    width: 200px;
+    max-height: calc(100vh - 210px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: none;
+    padding: 0;
+    z-index: 100;
+}
+
+.left-toc-container::-webkit-scrollbar {
+    display: none;
+}
+
+/* ── tocify 重置 ── */
+.tocify {
+    overflow: visible;
+    border: none;
+    background: none;
+    box-shadow: none;
+}
+
+.tocify ul,
+.tocify li {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border: none;
+}
+
+/* ── 层级 ── */
+.tocify-header {
+    text-indent: 0;
+}
+
+.tocify-subheader {
+    text-indent: 0;
+    display: none;
+}
+
+.tocify-subheader .tocify-subheader {
+    text-indent: 0;
+}
+
+.tocify-subheader .tocify-subheader .tocify-subheader {
+    text-indent: 0;
+}
+
+/* ── 链接样式 ── */
+.nav-list > li > a,
+.nav-list .nav-header {
+    margin: 0;
+}
+
+.nav-list > li > a {
+    padding: 0;
+}
+
+.bs-docs-sidebar .nav > li > a {
+    display: block;
+    padding: 5px 10px 5px 14px;
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.5;
+    color: var(--font-color-2);
+    text-decoration: none;
+    border-left: 2px solid transparent;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+/* 二级 */
+.bs-docs-sidebar .nav .nav > li > a {
+    padding-left: 24px;
+    font-size: 12px;
+}
+
+/* 三级 */
+.bs-docs-sidebar .nav .nav .nav > li > a {
+    padding-left: 34px;
+    font-size: 12px;
+}
+
+/* ── hover ── */
+.bs-docs-sidebar .nav > li > a:hover,
+.bs-docs-sidebar .nav > li > a:focus {
+    color: var(--font-color-1);
+    background-color: transparent;
+    text-decoration: none;
+}
+
+/* ── 激活态 ── */
+.bs-docs-sidebar .nav > .active > a,
+.bs-docs-sidebar .nav > .active:hover > a,
+.bs-docs-sidebar .nav > .active:focus > a {
+    color: var(--accent);
+    font-weight: 500;
+    border-left-color: var(--accent);
+    background-color: transparent;
+}
+
+/* 子级激活 */
+.bs-docs-sidebar .nav .nav > .active > a,
+.bs-docs-sidebar .nav .nav > .active:hover > a,
+.bs-docs-sidebar .nav .nav > .active:focus > a {
+    color: var(--accent);
+    font-weight: 500;
+    border-left-color: var(--accent);
+}
+
+/* ── 折叠 ── */
+.bs-docs-sidebar .nav ul.nav {
+    display: none;
+}
+
+.bs-docs-sidebar .nav > .active > ul.nav {
+    display: block;
+}
+
+/* ── 响应式: 纸面880+TOC244 ≈ 1360px, 留余量 → 1400px ── */
+@media screen and (max-width: 1400px) {
+    .left-toc-container {
+        display: none;
+    }
+}
+
+/* tocify 底部占位（覆盖插件默认） */
+.tocify-extend-page {
+    height: 10px !important;
+}

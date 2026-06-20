@@ -1,0 +1,313 @@
+{id:'life',name:'生命游戏',icon:'🦠',cat:'fun',desc:'Conway 生命游戏 · 经典预设 · 速度可调',
+html:function(){
+  return '<div class="t-row" style="flex-wrap:wrap">'+
+    '<label class="t-lbl">预设</label>'+
+    '<select class="t-sel" id="lifPreset">'+
+      '<option value="">空白</option>'+
+      '<option value="glider">滑翔机 Glider</option>'+
+      '<option value="blinker">闪烁器 Blinker</option>'+
+      '<option value="pulsar">脉冲星 Pulsar</option>'+
+      '<option value="rpent">R-五联骨牌</option>'+
+      '<option value="lwss">轻型飞船 LWSS</option>'+
+      '<option value="gosper">Gosper 滑翔机枪</option>'+
+      '<option value="random">随机 25%</option>'+
+    '</select>'+
+    '<label class="t-lbl" style="margin-left:8px">速度</label>'+
+    '<input class="t-in" id="lifSpeed" type="range" min="1" max="30" value="10" style="width:100px">'+
+    '<span class="t-lbl" id="lifSpeedVal">10 代/s</span>'+
+  '</div>'+
+  '<div class="t-row" style="gap:6px;flex-wrap:wrap">'+
+    '<button class="t-btn t-btn-o" id="lifStep">单步</button>'+
+    '<button class="t-btn" id="lifPlay">▶ 播放</button>'+
+    '<button class="t-btn t-btn-o" id="lifClear">清空</button>'+
+    '<span class="t-lbl" id="lifGen" style="margin-left:auto">代: 0 · 存活: 0</span>'+
+  '</div>'+
+  '<canvas id="lifCv" class="t-cv" style="width:100%;max-width:640px;margin:6px auto;display:block;cursor:crosshair;image-rendering:pixelated;max-height:calc(88vh - 220px)"></canvas>';
+},
+init:function(el){
+  var COLS=80,ROWS=60,CELL=8;
+  var cv=el.querySelector('#lifCv');
+  cv.style.maxWidth=(COLS*CELL)+'px';
+  var W=cv.clientWidth||Math.min(COLS*CELL,el.clientWidth-4);
+  var scale=W/(COLS*CELL);
+  var H=Math.round(ROWS*CELL*scale);
+  /* canvas 高度上限：取 el 实际高度（扣控件）或保守 fallback，确保不溢出 modal */
+  var bodyH=el.clientHeight;
+  var maxH=bodyH>100?Math.max(150,bodyH-100):Math.max(150,Math.round(window.innerHeight*0.45));
+  if(H>maxH){H=maxH;scale=H/(ROWS*CELL);W=Math.round(COLS*CELL*scale);}
+
+  var ctx=cv.getContext('2d');
+  var dpr=window.devicePixelRatio||1;
+  cv.width=W*dpr;cv.height=H*dpr;
+  cv.style.height=H+'px';
+  ctx.scale(dpr,dpr);
+
+  var cs=getComputedStyle(document.documentElement);
+  var accent=cs.getPropertyValue('--accent').trim()||'#5B8BA4';
+  var bgPaper=cs.getPropertyValue('--bg-paper').trim()||'#FCFCFD';
+  var borderWarm=cs.getPropertyValue('--border-warm').trim()||'#DCE1E7';
+
+  var grid=[];
+  var buf=[];
+  var gen=0;
+  var alive=0;
+  var running=false;
+  var timerId=null;
+  var speed=10;
+  var drawing=false;
+  var drawVal=1;
+
+  var selPreset=el.querySelector('#lifPreset');
+  var inpSpeed=el.querySelector('#lifSpeed');
+  var lblSpeed=el.querySelector('#lifSpeedVal');
+  var btnStep=el.querySelector('#lifStep');
+  var btnPlay=el.querySelector('#lifPlay');
+  var btnClear=el.querySelector('#lifClear');
+  var lblGen=el.querySelector('#lifGen');
+
+  function makeGrid(){
+    var g=[];
+    for(var r=0;r<ROWS;r++){
+      g[r]=[];
+      for(var c=0;c<COLS;c++) g[r][c]=0;
+    }
+    return g;
+  }
+
+  function clearGrid(){
+    grid=makeGrid();
+    buf=makeGrid();
+    gen=0;alive=0;
+    updateLabel();
+  }
+
+  function updateLabel(){
+    lblGen.textContent='代: '+gen+' · 存活: '+alive;
+  }
+
+  function countAlive(){
+    var cnt=0;
+    for(var r=0;r<ROWS;r++)
+      for(var c=0;c<COLS;c++)
+        if(grid[r][c])cnt++;
+    return cnt;
+  }
+
+  /* ===== 预设图案 ===== */
+  var PATTERNS={
+    glider:[[0,1],[1,2],[2,0],[2,1],[2,2]],
+    blinker:[[0,0],[0,1],[0,2]],
+    lwss:[[0,1],[0,4],[1,0],[2,0],[2,4],[3,0],[3,1],[3,2],[3,3]],
+    rpent:[[0,1],[0,2],[1,0],[1,1],[2,1]],
+    pulsar:[
+      [0,2],[0,3],[0,4],[0,8],[0,9],[0,10],
+      [2,0],[2,5],[2,7],[2,12],
+      [3,0],[3,5],[3,7],[3,12],
+      [4,0],[4,5],[4,7],[4,12],
+      [5,2],[5,3],[5,4],[5,8],[5,9],[5,10],
+      [7,2],[7,3],[7,4],[7,8],[7,9],[7,10],
+      [8,0],[8,5],[8,7],[8,12],
+      [9,0],[9,5],[9,7],[9,12],
+      [10,0],[10,5],[10,7],[10,12],
+      [12,2],[12,3],[12,4],[12,8],[12,9],[12,10]
+    ],
+    gosper:[
+      [0,24],
+      [1,22],[1,24],
+      [2,12],[2,13],[2,20],[2,21],[2,34],[2,35],
+      [3,11],[3,15],[3,20],[3,21],[3,34],[3,35],
+      [4,0],[4,1],[4,10],[4,16],[4,20],[4,21],
+      [5,0],[5,1],[5,10],[5,14],[5,16],[5,17],[5,22],[5,24],
+      [6,10],[6,16],[6,24],
+      [7,11],[7,15],
+      [8,12],[8,13]
+    ]
+  };
+
+  function loadPreset(name){
+    clearGrid();
+    if(name==='random'){
+      for(var r=0;r<ROWS;r++)
+        for(var c=0;c<COLS;c++)
+          grid[r][c]=Math.random()<0.25?1:0;
+      alive=countAlive();
+      updateLabel();
+      render();
+      return;
+    }
+    var pat=PATTERNS[name];
+    if(!pat){render();return}
+    var offR=Math.floor(ROWS/2)-6;
+    var offC=Math.floor(COLS/2)-6;
+    if(name==='gosper'){offR=Math.floor(ROWS/2)-5;offC=4;}
+    for(var i=0;i<pat.length;i++){
+      var r=pat[i][0]+offR;
+      var c=pat[i][1]+offC;
+      if(r>=0&&r<ROWS&&c>=0&&c<COLS) grid[r][c]=1;
+    }
+    alive=countAlive();
+    updateLabel();
+    render();
+  }
+
+  /* ===== 演化 ===== */
+  function step(){
+    for(var r=0;r<ROWS;r++){
+      for(var c=0;c<COLS;c++){
+        var nb=0;
+        for(var dr=-1;dr<=1;dr++){
+          for(var dc=-1;dc<=1;dc++){
+            if(dr===0&&dc===0)continue;
+            var nr=(r+dr+ROWS)%ROWS;
+            var nc=(c+dc+COLS)%COLS;
+            nb+=grid[nr][nc];
+          }
+        }
+        if(grid[r][c]){
+          buf[r][c]=(nb===2||nb===3)?1:0;
+        }else{
+          buf[r][c]=(nb===3)?1:0;
+        }
+      }
+    }
+    var tmp=grid;grid=buf;buf=tmp;
+    gen++;
+    alive=countAlive();
+    updateLabel();
+  }
+
+  /* ===== 渲染 ===== */
+  function render(){
+    ctx.fillStyle=bgPaper;
+    ctx.fillRect(0,0,W,H);
+
+    // 网格线
+    ctx.strokeStyle=borderWarm;
+    ctx.lineWidth=0.5;
+    for(var r=0;r<=ROWS;r++){
+      ctx.beginPath();ctx.moveTo(0,r*CELL);ctx.lineTo(W,r*CELL);ctx.stroke();
+    }
+    for(var c=0;c<=COLS;c++){
+      ctx.beginPath();ctx.moveTo(c*CELL,0);ctx.lineTo(c*CELL,H);ctx.stroke();
+    }
+
+    // 存活细胞
+    ctx.fillStyle=accent;
+    for(var r=0;r<ROWS;r++){
+      for(var c=0;c<COLS;c++){
+        if(grid[r][c]){
+          ctx.fillRect(c*CELL+0.5,r*CELL+0.5,CELL-1,CELL-1);
+        }
+      }
+    }
+  }
+
+  /* ===== 播放控制 ===== */
+  function startPlay(){
+    if(running)return;
+    running=true;
+    btnPlay.textContent='⏸ 暂停';
+    tick();
+  }
+
+  function stopPlay(){
+    running=false;
+    btnPlay.textContent='▶ 播放';
+    if(timerId){clearTimeout(timerId);timerId=null}
+  }
+
+  function tick(){
+    if(!running)return;
+    step();
+    render();
+    timerId=setTimeout(tick,1000/speed);
+  }
+
+  /* ===== 交互：画格子 ===== */
+  function getCellFromEvent(e){
+    var rect=cv.getBoundingClientRect();
+    var scaleX=W/rect.width,scaleY=H/rect.height;
+    var clientX,clientY;
+    if(e.touches){clientX=e.touches[0].clientX;clientY=e.touches[0].clientY}
+    else{clientX=e.clientX;clientY=e.clientY}
+    var x=(clientX-rect.left)*scaleX;
+    var y=(clientY-rect.top)*scaleY;
+    return{r:Math.floor(y/CELL),c:Math.floor(x/CELL)};
+  }
+
+  function toggleCell(e){
+    var cell=getCellFromEvent(e);
+    if(cell.r<0||cell.r>=ROWS||cell.c<0||cell.c>=COLS)return;
+    grid[cell.r][cell.c]=drawVal;
+    alive=countAlive();
+    updateLabel();
+    render();
+  }
+
+  cv.addEventListener('mousedown',function(e){
+    var cell=getCellFromEvent(e);
+    if(cell.r<0||cell.r>=ROWS||cell.c<0||cell.c>=COLS)return;
+    drawVal=grid[cell.r][cell.c]?0:1;
+    drawing=true;
+    toggleCell(e);
+  });
+  cv.addEventListener('mousemove',function(e){
+    if(drawing)toggleCell(e);
+  });
+  cv.addEventListener('mouseup',function(){drawing=false});
+  cv.addEventListener('mouseleave',function(){drawing=false});
+
+  cv.addEventListener('touchstart',function(e){
+    e.preventDefault();
+    var cell=getCellFromEvent(e);
+    if(cell.r>=0&&cell.r<ROWS&&cell.c>=0&&cell.c<COLS){
+      drawVal=grid[cell.r][cell.c]?0:1;
+      drawing=true;
+      toggleCell(e);
+    }
+  },{passive:false});
+  cv.addEventListener('touchmove',function(e){
+    e.preventDefault();
+    if(drawing)toggleCell(e);
+  },{passive:false});
+  cv.addEventListener('touchend',function(e){
+    e.preventDefault();drawing=false;
+  },{passive:false});
+
+  /* ===== 控件事件 ===== */
+  selPreset.onchange=function(){
+    stopPlay();
+    if(selPreset.value) loadPreset(selPreset.value);
+    else{clearGrid();render();}
+  };
+
+  inpSpeed.oninput=function(){
+    speed=parseInt(inpSpeed.value)||10;
+    lblSpeed.textContent=speed+' 代/s';
+  };
+
+  btnStep.onclick=function(){
+    stopPlay();
+    step();
+    render();
+  };
+
+  btnPlay.onclick=function(){
+    if(running)stopPlay();else startPlay();
+  };
+
+  btnClear.onclick=function(){
+    stopPlay();
+    selPreset.value='';
+    clearGrid();
+    render();
+  };
+
+  /* ===== 初始化 ===== */
+  clearGrid();
+  render();
+
+  el._cleanup=function(){
+    stopPlay();
+  };
+}}

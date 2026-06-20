@@ -1,0 +1,37 @@
+<a class="browse-back" href="/list/">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+  文章列表
+</a>
+<div class="subpage-title">📚<i>专栏</i></div>
+
+<div class="series-grid">
+  <% if(page.seriesNames && page.seriesNames.length > 0) { %>
+    <% page.seriesNames.forEach(function(name) { %>
+      <% var info = page.seriesInfo[name]; %>
+      <% var slug = page.slugMap[name]; %>
+      <a class="series-card" href="/series/<%= slug %>/" style="--sc: <%= info.color %>;">
+        <div class="series-card-icon" style="color: <%= info.color %>;">
+          <svg viewBox="0 0 24 24" width="36" height="36" fill="none">
+            <rect x="4" y="2" width="16" height="20" rx="2" fill="currentColor" fill-opacity="0.12" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="8" y1="2" x2="8" y2="22" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="11" y1="8" x2="17" y2="8" stroke="currentColor" stroke-width="1" opacity="0.45" stroke-linecap="round"/>
+            <line x1="11" y1="12" x2="15" y2="12" stroke="currentColor" stroke-width="1" opacity="0.45" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="series-card-body">
+          <div class="series-card-title"><%= name %></div>
+          <div class="series-card-meta">
+            <span><%= info.count %> 篇</span>
+            <span class="series-card-dot">·</span>
+            <span><%= date(info.latest.date, 'YYYY-MM-DD') %> 更新</span>
+          </div>
+          <div class="series-card-latest" title="<%= info.latest.title %>">
+            最新：<%= info.latest.title %>
+          </div>
+        </div>
+      </a>
+    <% }); %>
+  <% } else { %>
+    <p class="series-empty">暂无专栏。在文章 front matter 中添加 <code>series: 专栏名</code> 即可自动创建。</p>
+  <% } %>
+</div>

@@ -1,0 +1,59 @@
+{id:'matrix',name:'矩阵计算',icon:'🔢',cat:'academic',desc:'复数 · 行列式 · 逆 · 特征值 · KaTeX',
+html(){return'<div class="t-split"><div><div class="t-lbl">矩阵 A（逗号分隔，换行分行，复数如 3+2i）</div><textarea class="t-ta" id="matA" rows="3">1+i, 2\n3, 4-i</textarea></div><div><div class="t-lbl">矩阵 B</div><textarea class="t-ta" id="matB" rows="3">5, 6i\n7, 8</textarea></div></div><div class="t-row" style="margin-top:6px;flex-wrap:wrap"><button class="t-btn" data-op="det">det(A)</button><button class="t-btn" data-op="inv">A⁻¹</button><button class="t-btn" data-op="mul">A × B</button><button class="t-btn" data-op="trans">Aᵀ</button><button class="t-btn t-btn-o" data-op="conj">A*（共轭转置）</button><button class="t-btn t-btn-o" data-op="trace">tr(A)</button><button class="t-btn t-btn-o" data-op="rank">rank(A)</button><button class="t-btn t-btn-o" data-op="add">A + B</button><button class="t-btn t-btn-o" data-op="scale">kA</button><button class="t-btn t-btn-o" data-op="eigen">特征值</button></div><div class="t-row"><span class="t-lbl">标量 k =</span><input class="t-in" id="matK" value="2" style="width:60px"></div><div id="matRes" style="max-height:280px;overflow:auto;padding:12px;background:#fafafa;border-radius:8px;border:1px solid #eee;line-height:1.8"></div>'},
+async init(el){
+  await loadKaTeX();
+  /* Complex number: [re, im] */
+  function C(re,im){return[re||0,im||0]}
+  function cadd(a,b){return[a[0]+b[0],a[1]+b[1]]}
+  function csub(a,b){return[a[0]-b[0],a[1]-b[1]]}
+  function cmul(a,b){return[a[0]*b[0]-a[1]*b[1],a[0]*b[1]+a[1]*b[0]]}
+  function cdiv(a,b){var d=b[0]*b[0]+b[1]*b[1];if(d===0)throw new Error('除以零');return[(a[0]*b[0]+a[1]*b[1])/d,(a[1]*b[0]-a[0]*b[1])/d]}
+  function cconj(a){return[a[0],-a[1]]}
+  function cneg(a){return[-a[0],-a[1]]}
+  function csqrt(a){var r=Math.sqrt(a[0]*a[0]+a[1]*a[1]);var t=Math.atan2(a[1],a[0]);return[Math.sqrt(r)*Math.cos(t/2),Math.sqrt(r)*Math.sin(t/2)]}
+  function cabs(a){return Math.sqrt(a[0]*a[0]+a[1]*a[1])}
+  function cfmt(c){var re=+c[0].toFixed(4),im=+c[1].toFixed(4);if(im===0)return String(re);if(re===0)return im===1?'i':im===-1?'-i':im+'i';var sign=im>0?'+':'-';var absIm=Math.abs(im);return re+(sign)+(absIm===1?'':absIm)+'i'}
+  function cLatex(c){var re=+c[0].toFixed(4),im=+c[1].toFixed(4);if(im===0)return String(re);if(re===0)return im===1?'i':im===-1?'-i':im+'i';var sign=im>0?'+':'';return re+sign+im+'i'}
+  function parseC(s){s=s.trim();if(!s)return C(0,0);s=s.replace(/\s/g,'');if(s.match(/^[+-]?\d*\.?\d+$/))return C(+s,0);if(s.match(/^[+-]?\d*\.?\d*i$/)){var ts=s.replace('i','');var iv=ts===''||ts==='+'?1:ts==='-'?-1:+ts;return C(0,iv)}var m=s.match(/^([+-]?\d*\.?\d+)([+-]\d*\.?\d*)i$/);if(m){var re=+m[1];var imStr=m[2];var im=imStr==='+'?1:imStr==='-'?-1:+imStr;return C(re,im)}throw new Error('无法解析: '+s)}
+  function matToLatex(m){var s='\\begin{pmatrix}';for(var i=0;i<m.length;i++){for(var j=0;j<m[i].length;j++){s+=cLatex(m[i][j]);if(j<m[i].length-1)s+=' & '}if(i<m.length-1)s+='\\\\'}s+='\\end{pmatrix}';return s}
+  function parse(s){var rows=s.trim().split('\n').map(function(r){return r.split(',').map(function(v){return parseC(v)})});var cols=rows[0].length;rows.forEach(function(r,i){if(r.length!==cols)throw new Error('第'+(i+1)+'行列数不一致')});return rows}
+  function isSquare(m){return m.length===m[0].length}
+  function det(m){
+    if(!isSquare(m))throw new Error('行列式要求方阵');
+    var n=m.length;if(n===1)return m[0][0];if(n===2)return csub(cmul(m[0][0],m[1][1]),cmul(m[0][1],m[1][0]));
+    var d=C(0,0);for(var j=0;j<n;j++){var sub=m.slice(1).map(function(r){return r.slice(0,j).concat(r.slice(j+1))});var cofactor=cmul(m[0][j],det(sub));d=j%2===0?cadd(d,cofactor):csub(d,cofactor)}return d;
+  }
+  function inv(m){
+    if(!isSquare(m))throw new Error('求逆要求方阵');
+    var n=m.length,d=det(m);if(cabs(d)<1e-10)throw new Error('矩阵奇异，不可逆');
+    if(n===2)return[[cdiv(m[1][1],d),cdiv(cneg(m[0][1]),d)],[cdiv(cneg(m[1][0]),d),cdiv(m[0][0],d)]];
+    var adj=[];for(var i=0;i<n;i++){adj[i]=[];for(var j=0;j<n;j++){var sub=m.filter(function(_,r){return r!==i}).map(function(r){return r.filter(function(_,c){return c!==j})});adj[i][j]=cdiv((i+j)%2===0?det(sub):cneg(det(sub)),d)}}
+    return adj[0].map(function(_,c){return adj.map(function(r){return r[c]})});
+  }
+  function mul(a,b){
+    if(a[0].length!==b.length)throw new Error('A列数 ≠ B行数');
+    var r=[];for(var i=0;i<a.length;i++){r[i]=[];for(var j=0;j<b[0].length;j++){var s=C(0,0);for(var k=0;k<b.length;k++)s=cadd(s,cmul(a[i][k],b[k][j]));r[i][j]=s}}return r;
+  }
+  function add(a,b){if(a.length!==b.length||a[0].length!==b[0].length)throw new Error('矩阵尺寸不一致');return a.map(function(r,i){return r.map(function(v,j){return cadd(v,b[i][j])})})}
+  function rank(m){var a=m.map(function(r){return r.map(function(c){return c.slice()})});var rows=a.length,cols=a[0].length;var r=0;for(var c=0;c<cols&&r<rows;c++){var p=-1;for(var i=r;i<rows;i++)if(cabs(a[i][c])>1e-10){p=i;break}if(p===-1)continue;var tmp=a[r];a[r]=a[p];a[p]=tmp;var f=a[r][c];for(var j=c;j<cols;j++)a[r][j]=cdiv(a[r][j],f);for(var i=0;i<rows;i++){if(i===r)continue;var f2=a[i][c];for(var j=c;j<cols;j++)a[i][j]=csub(a[i][j],cmul(f2,a[r][j]))}r++}return r}
+  function eigen2x2(m){if(m.length!==2)throw new Error('特征值仅支持 2×2');var tr=cadd(m[0][0],m[1][1]),dt=det(m);var disc=csub(cmul(tr,tr),cmul(C(4,0),dt));var sq=csqrt(disc);return[cdiv(cadd(tr,sq),C(2,0)),cdiv(csub(tr,sq),C(2,0))]}
+  var res=el.querySelector('#matRes');
+  el.querySelectorAll('[data-op]').forEach(function(btn){
+    btn.onclick=function(){try{
+      var a=parse(el.querySelector('#matA').value);var html='';var aL=matToLatex(a);
+      switch(btn.dataset.op){
+        case'det':html+=texD('\\det'+aL+' = '+cLatex(det(a)));break;
+        case'inv':var iv=inv(a);html+=texD(aL+'^{-1} = '+matToLatex(iv));break;
+        case'mul':var b=parse(el.querySelector('#matB').value);html+=texD(aL+'\\times'+matToLatex(b)+' = '+matToLatex(mul(a,b)));break;
+        case'trans':var t=a[0].map(function(_,c){return a.map(function(r){return r[c]})});html+=texD(aL+'^{\\mathsf{T}} = '+matToLatex(t));break;
+        case'conj':var ct=a[0].map(function(_,c){return a.map(function(r){return cconj(r[c])})});html+=texD(aL+'^{\\dagger} = '+matToLatex(ct));break;
+        case'trace':if(!isSquare(a))throw new Error('迹要求方阵');var tr=C(0,0);for(var i=0;i<a.length;i++)tr=cadd(tr,a[i][i]);html+=texD('\\text{tr}'+aL+' = '+cLatex(tr));break;
+        case'rank':html+=texD('\\text{rank}'+aL+' = '+rank(a));break;
+        case'add':var b=parse(el.querySelector('#matB').value);html+=texD(aL+'+'+matToLatex(b)+' = '+matToLatex(add(a,b)));break;
+        case'scale':var k=+el.querySelector('#matK').value;var km=a.map(function(r){return r.map(function(v){return cmul(C(k,0),v)})});html+=texD(k+'\\cdot'+aL+' = '+matToLatex(km));break;
+        case'eigen':if(!isSquare(a))throw new Error('特征值要求方阵');if(a.length===2){var ev=eigen2x2(a);html+='<strong>特征方程</strong> '+texD('\\det(A-\\lambda I)=0');html+=texD('\\lambda_1='+cLatex(ev[0]));html+=texD('\\lambda_2='+cLatex(ev[1]))}else if(a.length===1){html+=texD('\\lambda='+cLatex(a[0][0]))}else{html+='<div style="color:#e6a23c">⚠ 特征值计算仅支持 1×1 和 2×2。</div>';var tr=C(0,0);for(var i=0;i<a.length;i++)tr=cadd(tr,a[i][i]);html+=tex('\\text{tr}(A)=\\sum\\lambda_i='+cLatex(tr))+' &nbsp; '+tex('\\det(A)=\\prod\\lambda_i='+cLatex(det(a)))}break;
+      }
+      res.innerHTML=html;
+    }catch(e){res.innerHTML='<span style="color:#f56c6c">⚠ '+e.message+'</span>'}};
+  });
+}}

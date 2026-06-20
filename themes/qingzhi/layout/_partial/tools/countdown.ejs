@@ -1,0 +1,51 @@
+{id:'countdown',name:'倒计时',icon:'⏳',cat:'fun',desc:'距离目标时刻还有…',
+html(){
+  function opts(min,max,pad){let h='';for(let i=min;i<=max;i++)h+='<option value="'+i+'">'+(pad&&i<10?'0'+i:i)+'</option>';return h}
+  return'<div style="display:flex;gap:3px;align-items:center;flex-wrap:wrap;justify-content:center">'+
+  '<select class="t-sel cd-u" id="cdY" style="width:75px">'+opts(2025,2040)+'</select><span style="color:#aaa;font-size:.78em">年</span>'+
+  '<select class="t-sel cd-u" id="cdM" style="width:52px">'+opts(1,12,true)+'</select><span style="color:#aaa;font-size:.78em">月</span>'+
+  '<select class="t-sel cd-u" id="cdD" style="width:52px">'+opts(1,31,true)+'</select><span style="color:#aaa;font-size:.78em">日</span>'+
+  '<select class="t-sel cd-u" id="cdHH" style="width:52px">'+opts(0,23,true)+'</select><span style="font-weight:700;color:#999">:</span>'+
+  '<select class="t-sel cd-u" id="cdMM" style="width:52px">'+opts(0,59,true)+'</select>'+
+  '<button class="t-btn t-btn-s" id="cdStart" style="margin-left:6px">▶ 开始</button>'+
+  '</div><div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:8px 0"><button class="t-btn t-btn-d cd-preset" data-v="ny">🎆 新年</button><button class="t-btn t-btn-d cd-preset" data-v="mid">🌕 中秋</button><button class="t-btn t-btn-d cd-preset" data-v="nat">🇨🇳 国庆</button><button class="t-btn t-btn-d cd-preset" data-v="cx">🎄 圣诞</button></div><div class="pomo-label" id="cdLabel" style="margin-top:10px"></div><div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:8px"><div style="text-align:center"><div style="font-size:2em;font-weight:700;color:#f44" id="cdDy">0</div><div style="font-size:.72em;color:#888">天</div></div><div style="text-align:center"><div style="font-size:2em;font-weight:700;color:#fa1" id="cdH">0</div><div style="font-size:.72em;color:#888">时</div></div><div style="text-align:center"><div style="font-size:2em;font-weight:700;color:#4a90d9" id="cdMi">0</div><div style="font-size:.72em;color:#888">分</div></div><div style="text-align:center"><div style="font-size:2em;font-weight:700;color:#52c41a" id="cdS">0</div><div style="font-size:.72em;color:#888">秒</div></div></div><div style="text-align:center;margin-top:8px;font-size:.78em;color:#888" id="cdTotal"></div>';
+},
+init(el){
+  let target=null,iv=null;
+  const q=s=>el.querySelector(s);
+  function daysInMonth(y,m){return new Date(y,m,0).getDate()}
+  function updateDays(){
+    var y=+q('#cdY').value,m=+q('#cdM').value,maxD=daysInMonth(y,m),curD=+q('#cdD').value;
+    var sel=q('#cdD'),html='';for(var i=1;i<=maxD;i++)html+='<option value="'+i+'">'+(i<10?'0'+i:i)+'</option>';
+    sel.innerHTML=html;sel.value=Math.min(curD,maxD);
+  }
+  function fillSel(d){q('#cdY').value=d.getFullYear();q('#cdM').value=d.getMonth()+1;updateDays();q('#cdD').value=d.getDate();q('#cdHH').value=d.getHours();q('#cdMM').value=d.getMinutes()}
+  q('#cdY').onchange=updateDays;q('#cdM').onchange=updateDays;
+  function getPresetDate(key){
+    const now=new Date(),y=now.getFullYear();
+    if(key==='ny')return new Date(y+1,0,1);
+    if(key==='mid'){const dates={2025:'2025-10-06',2026:'2026-09-25',2027:'2027-09-15'};return new Date(dates[y]||y+'-09-20')}
+    if(key==='nat')return new Date(now>new Date(y,9,1)?y+1:y,9,1);
+    if(key==='cx')return new Date(now>new Date(y,11,25)?y+1:y,11,25);
+    return new Date(y+1,0,1);
+  }
+  function tick(){
+    if(!target)return;const diff=target-Date.now();
+    if(diff<=0){q('#cdDy').textContent=q('#cdH').textContent=q('#cdMi').textContent=q('#cdS').textContent='0';q('#cdLabel').textContent='🎉 已到达！';q('#cdTotal').textContent='';clearInterval(iv);return}
+    const s=Math.floor(diff/1000),m=Math.floor(s/60),h=Math.floor(m/60),d=Math.floor(h/24);
+    q('#cdDy').textContent=d;q('#cdH').textContent=h%24;q('#cdMi').textContent=m%60;q('#cdS').textContent=s%60;
+    q('#cdTotal').textContent='共计 '+s.toLocaleString()+' 秒';
+  }
+  function start(){
+    clearInterval(iv);
+    target=new Date(+q('#cdY').value,+q('#cdM').value-1,+q('#cdD').value,+q('#cdHH').value,+q('#cdMM').value).getTime();
+    q('#cdLabel').textContent='⏳ 目标: '+new Date(target).toLocaleString('zh-CN');
+    tick();iv=setInterval(tick,1000);
+  }
+  q('#cdStart').onclick=start;
+  el.querySelectorAll('.cd-preset').forEach(b=>b.onclick=function(){
+    const d=getPresetDate(this.dataset.v);fillSel(d);start();
+  });
+  const ny=new Date(new Date().getFullYear()+1,0,1);fillSel(ny);start();
+  el._cleanup=()=>clearInterval(iv);
+}}

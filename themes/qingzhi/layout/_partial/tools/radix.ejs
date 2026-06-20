@@ -1,0 +1,14 @@
+{id:'radix',name:'进制转换',icon:'🔢',cat:'dev',desc:'二/八/十/十六进制实时联动',
+html(){return'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><div class="t-lbl">二进制 BIN</div><input class="t-in rx" id="rxBin" data-base="2" placeholder="如 11111111" style="font-family:monospace"></div><div><div class="t-lbl">八进制 OCT</div><input class="t-in rx" id="rxOct" data-base="8" placeholder="如 377" style="font-family:monospace"></div><div><div class="t-lbl">十进制 DEC</div><input class="t-in rx" id="rxDec" data-base="10" value="255" placeholder="如 255" style="font-family:monospace"></div><div><div class="t-lbl">十六进制 HEX</div><input class="t-in rx" id="rxHex" data-base="16" placeholder="如 FF" style="font-family:monospace"></div></div><div style="font-size:.72em;color:#999;margin-top:6px;text-align:center">在任意框内输入，其余三个自动联动转换</div>'},
+init(el){
+  const fields=el.querySelectorAll('.rx');
+  function sync(src){
+    const base=+src.dataset.base,v=src.value.trim();
+    if(!v){fields.forEach(f=>{if(f!==src)f.value=''});return}
+    const n=parseInt(v,base);
+    if(isNaN(n)){return}
+    fields.forEach(f=>{if(f!==src)f.value=n.toString(+f.dataset.base).toUpperCase()});
+  }
+  fields.forEach(f=>f.addEventListener('input',()=>sync(f)));
+  sync(el.querySelector('#rxDec'));
+}}

@@ -1,0 +1,124 @@
+{id:'focus',name:'专注助手',icon:'🍅',cat:'productivity',desc:'番茄钟 · 白噪音 · 自定义音频',
+html(){
+  let wopts='',bopts='';
+  for(let i=1;i<=120;i++){wopts+='<option value="'+i+'"'+(i===25?' selected':'')+'>'+i+'</option>';if(i<=60)bopts+='<option value="'+i+'"'+(i===5?' selected':'')+'>'+i+'</option>'}
+  return'<div class="t-row" style="justify-content:center"><span class="t-lbl">工作</span><select class="t-sel" id="focWork" style="width:auto">'+wopts+'</select><span class="t-lbl">分钟</span><span class="t-lbl" style="margin-left:8px">休息</span><select class="t-sel" id="focBreak" style="width:auto">'+bopts+'</select><span class="t-lbl">分钟</span></div><div class="pomo-label" id="focPhase">专注时间</div><div class="pomo-time" id="focTime">25:00</div><div class="t-row" style="justify-content:center"><button class="t-btn t-btn-s" id="focToggle" style="min-width:100px">▶ 开始</button><button class="t-btn t-btn-d" id="focReset">↺ 重置</button></div><div style="text-align:center;margin:12px 0;font-size:.82em;color:#888">🍅 × <span id="focDone">0</span></div><div style="border-top:1px solid #f0f0f0;margin-top:10px;padding-top:10px"><div class="t-lbl" style="text-align:center;margin-bottom:8px">🎧 环境音</div><div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center"><span class="focus-sound" data-type="white">🌊 白噪音</span><span class="focus-sound" data-type="brown">🌲 棕噪音</span><span class="focus-sound" data-type="pink">🌸 粉噪音</span><span class="focus-sound" data-type="rain">🌧️ 雨声</span><span class="focus-sound" data-type="fire">🔥 壁炉</span><span class="focus-sound" data-type="wind">💨 微风</span><span class="focus-sound" data-type="custom">🔗 自定义</span></div><div id="focCustomWrap" style="display:none;margin-top:8px;text-align:center"><input type="text" class="t-in" id="focCustomUrl" placeholder="粘贴 MP3/OGG 音频 URL" style="width:80%;font-size:.82em"><div style="font-size:.7em;color:#999;margin-top:4px">💡 可从 <a href="https://freesound.org" target="_blank">Freesound</a> / <a href="https://pixabay.com/sound-effects" target="_blank">Pixabay</a> 获取免费音效</div></div><div class="t-row" style="justify-content:center;margin-top:8px"><span class="t-lbl">音量</span><input type="range" id="focVol" min="0" max="100" value="20" style="width:150px"><span id="focVolVal" style="font-size:.78em;color:#888">20%</span></div></div>'},
+init(el){
+  let secs,running=false,timer=null,isWork=true,done=0;
+  let actx=null,noiseNode=null,gainNode=null,activeSound=null,customAudio=null;
+  function getWork(){return(+el.querySelector('#focWork').value||25)*60}
+  function getBreak(){return(+el.querySelector('#focBreak').value||5)*60}
+  function fmt(s){return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')}
+  function reset(){running=false;clearInterval(timer);secs=getWork();isWork=true;
+    el.querySelector('#focPhase').textContent='专注时间';
+    el.querySelector('#focTime').textContent=fmt(secs);
+    el.querySelector('#focToggle').textContent='▶ 开始';el.querySelector('#focToggle').className='t-btn t-btn-s';
+  }
+  secs=getWork();
+  function tick(){
+    if(!running)return;secs--;el.querySelector('#focTime').textContent=fmt(secs);
+    if(secs<=0){
+      if(isWork){done++;el.querySelector('#focDone').textContent=done;secs=getBreak();isWork=false;el.querySelector('#focPhase').textContent='☕ 休息时间'}
+      else{secs=getWork();isWork=true;el.querySelector('#focPhase').textContent='专注时间'}
+      el.querySelector('#focTime').textContent=fmt(secs);
+      try{new Notification(isWork?'休息结束，继续专注！':'🍅 番茄完成！休息一下')}catch(e){}
+    }
+  }
+  el.querySelector('#focToggle').onclick=function(){
+    if(running){running=false;clearInterval(timer);this.textContent='▶ 继续';this.className='t-btn t-btn-s'}
+    else{running=true;timer=setInterval(tick,1000);this.textContent='⏸ 暂停';this.className='t-btn t-btn-o';try{Notification.requestPermission()}catch(e){}}
+  };
+  el.querySelector('#focReset').onclick=reset;
+  el.querySelector('#focWork').onchange=()=>{if(!running)reset()};
+  el.querySelector('#focBreak').onchange=()=>{if(!running&&!isWork){secs=getBreak();el.querySelector('#focTime').textContent=fmt(secs)}};
+
+  function stopSound(){
+    if(noiseNode)try{noiseNode.stop()}catch(e){}
+    noiseNode=null;
+    if(customAudio){customAudio.pause();customAudio.src='';customAudio=null}
+  }
+
+  function playCustom(url){
+    if(!actx)actx=new(window.AudioContext||window.webkitAudioContext)();
+    if(actx.state==='suspended')actx.resume();
+    stopSound();
+    customAudio=new Audio();customAudio.crossOrigin='anonymous';customAudio.loop=true;customAudio.src=url;
+    const src=actx.createMediaElementSource(customAudio);
+    gainNode=actx.createGain();gainNode.gain.value=el.querySelector('#focVol').value/100;
+    src.connect(gainNode).connect(actx.destination);
+    customAudio.play().catch(e=>{el.querySelector('#focCustomUrl').placeholder='❌ 无法播放此 URL'});
+  }
+
+  function makeNoise(type){
+    if(!actx)actx=new(window.AudioContext||window.webkitAudioContext)();
+    if(actx.state==='suspended')actx.resume();
+    stopSound();
+    if(type==='custom'){
+      const url=el.querySelector('#focCustomUrl').value.trim();
+      if(url)playCustom(url);
+      return;
+    }
+    const sr=actx.sampleRate,dur=10,buf=actx.createBuffer(2,sr*dur,sr),dL=buf.getChannelData(0),dR=buf.getChannelData(1);
+    const len=dL.length;
+    if(type==='white'){
+      for(let i=0;i<len;i++){dL[i]=(Math.random()*2-1)*.4;dR[i]=(Math.random()*2-1)*.4}
+    }else if(type==='brown'){
+      let vL=0,vR=0;
+      for(let i=0;i<len;i++){vL+=(Math.random()*2-1)*.015;vR+=(Math.random()*2-1)*.015;vL=Math.max(-.5,Math.min(.5,vL));vR=Math.max(-.5,Math.min(.5,vR));dL[i]=vL;dR[i]=vR}
+    }else if(type==='pink'){
+      let b0L=0,b1L=0,b2L=0,b3L=0,b4L=0,b5L=0,b6L=0;
+      let b0R=0,b1R=0,b2R=0,b3R=0,b4R=0,b5R=0,b6R=0;
+      for(let i=0;i<len;i++){
+        const wL=Math.random()*2-1,wR=Math.random()*2-1;
+        b0L=.99886*b0L+wL*.0555179;b1L=.99332*b1L+wL*.0750759;b2L=.969*b2L+wL*.153852;b3L=.8665*b3L+wL*.3104856;b4L=.55*b4L+wL*.5329522;b5L=-.7616*b5L-wL*.016898;
+        dL[i]=(b0L+b1L+b2L+b3L+b4L+b5L+b6L+wL*.5362)*.11;b6L=wL*.115926;
+        b0R=.99886*b0R+wR*.0555179;b1R=.99332*b1R+wR*.0750759;b2R=.969*b2R+wR*.153852;b3R=.8665*b3R+wR*.3104856;b4R=.55*b4R+wR*.5329522;b5R=-.7616*b5R-wR*.016898;
+        dR[i]=(b0R+b1R+b2R+b3R+b4R+b5R+b6R+wR*.5362)*.11;b6R=wR*.115926;
+      }
+    }else if(type==='rain'){
+      for(let i=0;i<len;i++){
+        let v=(Math.random()*2-1)*.12;
+        if(Math.random()<.0003)v+=Math.random()*.6-.3;
+        if(Math.random()<.001)v+=(Math.random()-.5)*.3;
+        dL[i]=v+(Math.random()*2-1)*.03;dR[i]=v+(Math.random()*2-1)*.03;
+      }
+    }else if(type==='fire'){
+      let crack=0;
+      for(let i=0;i<len;i++){
+        let v=(Math.random()*2-1)*.08;crack*=.999;if(Math.random()<.0008)crack=(Math.random()-.3)*.6;v+=crack;
+        const drift=Math.sin(i/sr*2)*0.02;
+        dL[i]=v+drift+(Math.random()-.5)*.02;dR[i]=v-drift+(Math.random()-.5)*.02;
+      }
+    }else if(type==='wind'){
+      let vL=0,vR=0,gust=0;
+      for(let i=0;i<len;i++){
+        gust+=(Math.random()-.5)*.0001;gust=Math.max(-.1,Math.min(.1,gust));
+        vL+=(Math.random()-.5)*.008+gust;vR+=(Math.random()-.5)*.008+gust*.8;
+        vL*=.9995;vR*=.9995;
+        dL[i]=vL+(Math.random()-.5)*.02;dR[i]=vR+(Math.random()-.5)*.02;
+      }
+    }
+    noiseNode=actx.createBufferSource();noiseNode.buffer=buf;noiseNode.loop=true;
+    const filter=actx.createBiquadFilter();
+    if(type==='white'){filter.type='lowpass';filter.frequency.value=8000}
+    else if(type==='rain'){filter.type='bandpass';filter.frequency.value=2000;filter.Q.value=0.5}
+    else if(type==='wind'){filter.type='lowpass';filter.frequency.value=600}
+    else{filter.type='lowpass';filter.frequency.value=12000}
+    gainNode=actx.createGain();gainNode.gain.value=el.querySelector('#focVol').value/100;
+    noiseNode.connect(filter).connect(gainNode).connect(actx.destination);noiseNode.start();
+  }
+
+  el.querySelectorAll('.focus-sound').forEach(s=>{
+    s.onclick=()=>{
+      const isCustom=s.dataset.type==='custom';
+      el.querySelector('#focCustomWrap').style.display=isCustom?'':'none';
+      if(activeSound===s){s.classList.remove('active');stopSound();activeSound=null;return}
+      el.querySelectorAll('.focus-sound').forEach(x=>x.classList.remove('active'));
+      s.classList.add('active');activeSound=s;
+      if(!isCustom)makeNoise(s.dataset.type);
+    }
+  });
+  el.querySelector('#focCustomUrl').onchange=()=>{if(activeSound&&activeSound.dataset.type==='custom')makeNoise('custom')};
+  el.querySelector('#focVol').oninput=function(){el.querySelector('#focVolVal').textContent=this.value+'%';if(gainNode)gainNode.gain.value=this.value/100;if(customAudio)customAudio.volume=this.value/100};
+  el._cleanup=()=>{clearInterval(timer);stopSound();if(actx)try{actx.close()}catch(e){}};
+}}

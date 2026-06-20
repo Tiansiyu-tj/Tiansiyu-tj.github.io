@@ -1,0 +1,698 @@
+{id:'ode',name:'ODE 求解',icon:'📐',cat:'academic',desc:'Euler · RK4 · 隐式 · 自适应 · 方程组 · 相空间',
+html(){return `
+<div class="t-row" style="gap:6px;margin-bottom:12px">
+  <button id="odeTabSingle" class="t-btn">单方程</button>
+  <button id="odeTabSystem" class="t-btn t-btn-o">方程组</button>
+  <button id="odeTabNumerov" class="t-btn t-btn-o">二阶ODE</button>
+</div>
+<div id="odePanelSingle">
+  <label class="t-lbl">dy/dx = f(x, y)</label>
+  <input class="t-in" id="odeExpr" placeholder="-0.5*y + sin(2*x)">
+  <div class="t-row" style="gap:8px;margin-top:6px">
+    <div style="flex:1"><label class="t-lbl">初始 x</label><input class="t-in" id="odeX0" value="0"></div>
+    <div style="flex:1"><label class="t-lbl">初始 y</label><input class="t-in" id="odeY0" value="0"></div>
+    <div style="flex:1"><label class="t-lbl">终点 x</label><input class="t-in" id="odeXend" value="15"></div>
+    <div style="flex:1"><label class="t-lbl">步长 h</label><input class="t-in" id="odeH" value="0.05"></div>
+  </div>
+  <label class="t-lbl" style="margin-top:8px">求解方法</label>
+  <div style="display:flex;flex-wrap:wrap;gap:6px 16px;margin:4px 0 8px">
+    <label><input type="checkbox" id="odeMEuler" checked> Euler</label>
+    <label><input type="checkbox" id="odeMHeun" checked> 改进Euler(Heun)</label>
+    <label><input type="checkbox" id="odeMRK4" checked> RK4</label>
+    <label><input type="checkbox" id="odeMImpl"> 隐式Euler</label>
+    <label><input type="checkbox" id="odeMRK45"> 自适应RK45</label>
+  </div>
+  <div id="odeTolRow" style="display:none;margin-bottom:8px">
+    <label class="t-lbl">容差 (自适应RK45)</label>
+    <input class="t-in" id="odeTol" value="1e-6" style="width:120px">
+  </div>
+  <div class="t-row" style="flex-wrap:wrap;gap:6px;margin-bottom:8px">
+    <span class="t-lbl" style="margin-right:4px">预设:</span>
+    <button class="t-btn t-btn-o" data-preset="decay">衰减振荡</button>
+    <button class="t-btn t-btn-o" data-preset="exp">指数增长</button>
+    <button class="t-btn t-btn-o" data-preset="logistic">Logistic</button>
+    <button class="t-btn t-btn-o" data-preset="stiff">刚性方程</button>
+  </div>
+  <button class="t-btn" id="odeSolve">求解</button>
+</div>
+<div id="odePanelSystem" style="display:none">
+  <div id="odeSysEqs"></div>
+  <button class="t-btn t-btn-o" id="odeSysAdd" style="margin-top:6px">+ 添加方程</button>
+  <div class="t-row" style="gap:8px;margin-top:8px">
+    <div style="flex:1"><label class="t-lbl">初始 t</label><input class="t-in" id="odeSysT0" value="0"></div>
+    <div style="flex:1"><label class="t-lbl">终点 t</label><input class="t-in" id="odeSysTend" value="15"></div>
+    <div style="flex:1"><label class="t-lbl">步长 h</label><input class="t-in" id="odeSysH" value="0.05"></div>
+  </div>
+  <label class="t-lbl" style="margin-top:8px">求解方法</label>
+  <div style="display:flex;flex-wrap:wrap;gap:6px 16px;margin:4px 0 8px">
+    <label><input type="checkbox" id="odeSysMEuler" checked> Euler</label>
+    <label><input type="checkbox" id="odeSysMHeun" checked> Heun</label>
+    <label><input type="checkbox" id="odeSysMRK4" checked> RK4</label>
+  </div>
+  <label class="t-lbl">绘图模式</label>
+  <div style="display:flex;gap:16px;margin:4px 0 4px">
+    <label><input type="radio" name="odePlotMode" value="time" checked> 时间演化</label>
+    <label><input type="radio" name="odePlotMode" value="phase"> 相空间</label>
+  </div>
+  <div id="odePhaseAxes" style="display:none;margin:4px 0 8px">
+    <div class="t-row" style="gap:8px;align-items:center">
+      <span class="t-lbl">X 轴:</span>
+      <select class="t-sel" id="odePhaseX" style="width:80px"></select>
+      <span class="t-lbl">Y 轴:</span>
+      <select class="t-sel" id="odePhaseY" style="width:80px"></select>
+    </div>
+  </div>
+  <div class="t-row" style="flex-wrap:wrap;gap:6px;margin-bottom:8px">
+    <span class="t-lbl" style="margin-right:4px">预设:</span>
+    <button class="t-btn t-btn-o" data-syspreset="osc">阻尼振子</button>
+    <button class="t-btn t-btn-o" data-syspreset="lv">Lotka-Volterra</button>
+    <button class="t-btn t-btn-o" data-syspreset="chaos">混沌摆</button>
+  </div>
+  <button class="t-btn" id="odeSysSolve">求解</button>
+</div>
+<div id="odePanelNumerov" style="display:none">
+  <div class="t-res" style="font-size:.78em;margin-bottom:10px;padding:8px 12px;background:var(--bg-zebra)">
+    求解 <b>y'' + k²(x)·y = s(x)</b> — Numerov 算法 (O(h⁶)局部精度)
+  </div>
+  <label class="t-lbl">k²(x) 表达式</label>
+  <input class="t-in" id="odeNK2" placeholder="例: 4*pi^2" value="4*pi^2">
+  <label class="t-lbl" style="margin-top:6px">s(x) 源项</label>
+  <input class="t-in" id="odeNS" placeholder="0 (齐次)" value="0">
+  <div class="t-row" style="gap:8px;margin-top:6px">
+    <div style="flex:1"><label class="t-lbl">x₀</label><input class="t-in" id="odeNX0" value="0"></div>
+    <div style="flex:1"><label class="t-lbl">x_end</label><input class="t-in" id="odeNXend" value="1"></div>
+    <div style="flex:1"><label class="t-lbl">y(x₀)</label><input class="t-in" id="odeNY0" value="1"></div>
+    <div style="flex:1"><label class="t-lbl">y'(x₀)</label><input class="t-in" id="odeNDY0" value="0"></div>
+  </div>
+  <div class="t-row" style="margin-top:6px">
+    <label class="t-lbl">网格点数 N</label>
+    <input type="range" id="odeNN" min="50" max="2000" step="50" value="500" style="flex:1">
+    <span id="odeNNVal" style="min-width:40px;text-align:right">500</span>
+  </div>
+  <div class="t-row" style="flex-wrap:wrap;gap:6px;margin:8px 0">
+    <span class="t-lbl" style="margin-right:4px">预设:</span>
+    <button class="t-btn t-btn-o" data-numpreset="harmonic">简谐振动 k²=4π²</button>
+    <button class="t-btn t-btn-o" data-numpreset="airy">Airy 型 k²=x</button>
+    <button class="t-btn t-btn-o" data-numpreset="bessel">类 Bessel k²=1-1/(4x²)</button>
+  </div>
+  <button class="t-btn" id="odeNSolve">Numerov 求解</button>
+</div>
+<canvas id="odeCanvas" class="t-cv" style="width:100%;margin-top:10px;display:none"></canvas>
+<div style="margin-top:8px">
+  <button class="t-btn t-btn-o" id="odeToggleTable" style="display:none">显示数据表</button>
+</div>
+<div id="odeTableWrap" style="display:none;margin-top:8px;max-height:400px;overflow:auto"></div>
+<div id="odeResult" class="t-res"></div>`},
+async init(el){
+  var math=await loadMath();
+  var q=function(s){return el.querySelector(s)};
+  var qa=function(s){return el.querySelectorAll(s)};
+
+  /* ========== CSS 变量缓存 ========== */
+  var cs=getComputedStyle(document.documentElement);
+  var C_ACCENT=cs.getPropertyValue('--accent').trim()||'#5B8BA4';
+  var colors=[C_ACCENT,'#67c23a','#f56c6c','#e6a23c','#9b59b6','#00bcd4','#ff7043','#8d6e63','#78909c','#26a69a'];
+
+  /* ========== DOM 引用 ========== */
+  var cvs=q('#odeCanvas'),ctx=cvs.getContext('2d');
+  var resEl=q('#odeResult'),tableWrap=q('#odeTableWrap'),toggleBtn=q('#odeToggleTable');
+  var panelS=q('#odePanelSingle'),panelY=q('#odePanelSystem'),panelN=q('#odePanelNumerov');
+  var lastRedraw=null;
+
+  /* ========== 下标字符工具 ========== */
+  var subDigits=['\u2080','\u2081','\u2082','\u2083','\u2084','\u2085','\u2086','\u2087','\u2088','\u2089'];
+  function toSub(n){return String(n).split('').map(function(d){return subDigits[+d]}).join('')}
+
+  /* ========== 动态方程组管理 ========== */
+  var sysEqContainer=q('#odeSysEqs');
+  var sysEqCount=0;
+  var MAX_EQ=10;
+  var MIN_EQ=2;
+
+  function addEqRow(idx,fVal,y0Val){
+    sysEqCount++;
+    var row=document.createElement('div');
+    row.className='t-row ode-eq-row';
+    row.dataset.idx=idx;
+    row.style.cssText='gap:6px;margin-bottom:4px;align-items:center';
+    row.innerHTML=
+      '<span class="t-lbl" style="white-space:nowrap">dy'+toSub(idx)+'/dt =</span>'+
+      '<input class="t-in ode-sys-f" data-idx="'+idx+'" value="'+(fVal||'')+'" style="flex:1">'+
+      '<span class="t-lbl" style="white-space:nowrap">y'+toSub(idx)+'(0) =</span>'+
+      '<input class="t-in ode-sys-y0" data-idx="'+idx+'" value="'+(y0Val||'0')+'" style="width:60px">'+
+      '<button class="t-btn t-btn-d ode-sys-del" data-idx="'+idx+'" style="padding:2px 8px">\u2715</button>';
+    sysEqContainer.appendChild(row);
+    updateDelButtons();
+    updatePhaseSelectors();
+  }
+
+  function removeEqRow(idx){
+    var row=sysEqContainer.querySelector('.ode-eq-row[data-idx="'+idx+'"]');
+    if(row){row.remove();sysEqCount--;renumberEqs();updateDelButtons();updatePhaseSelectors()}
+  }
+
+  function renumberEqs(){
+    var rows=sysEqContainer.querySelectorAll('.ode-eq-row');
+    for(var i=0;i<rows.length;i++){
+      var newIdx=i+1;
+      rows[i].dataset.idx=newIdx;
+      rows[i].querySelector('.ode-sys-f').dataset.idx=newIdx;
+      rows[i].querySelector('.ode-sys-y0').dataset.idx=newIdx;
+      rows[i].querySelector('.ode-sys-del').dataset.idx=newIdx;
+      rows[i].querySelectorAll('span')[0].textContent='dy'+toSub(newIdx)+'/dt =';
+      rows[i].querySelectorAll('span')[1].textContent='y'+toSub(newIdx)+'(0) =';
+    }
+  }
+
+  function updateDelButtons(){
+    var dels=sysEqContainer.querySelectorAll('.ode-sys-del');
+    for(var i=0;i<dels.length;i++){
+      dels[i].style.display=sysEqCount<=MIN_EQ?'none':'';
+    }
+  }
+
+  function updatePhaseSelectors(){
+    var selX=q('#odePhaseX'),selY=q('#odePhaseY');
+    var prevX=selX.value,prevY=selY.value;
+    selX.innerHTML='';selY.innerHTML='';
+    var rows=sysEqContainer.querySelectorAll('.ode-eq-row');
+    for(var i=0;i<rows.length;i++){
+      var idx=i+1;
+      var optX=document.createElement('option');optX.value='y'+idx;optX.textContent='y'+toSub(idx);
+      var optY=document.createElement('option');optY.value='y'+idx;optY.textContent='y'+toSub(idx);
+      selX.appendChild(optX);selY.appendChild(optY);
+    }
+    if(prevX&&selX.querySelector('option[value="'+prevX+'"]'))selX.value=prevX;
+    else selX.value='y1';
+    if(prevY&&selY.querySelector('option[value="'+prevY+'"]'))selY.value=prevY;
+    else if(rows.length>=2)selY.value='y2';
+    else selY.value='y1';
+  }
+
+  function getEqCount(){return sysEqContainer.querySelectorAll('.ode-eq-row').length}
+
+  function clearAllEqs(){sysEqContainer.innerHTML='';sysEqCount=0}
+
+  function setSystemEqs(eqs){
+    clearAllEqs();
+    for(var i=0;i<eqs.length;i++) addEqRow(i+1,eqs[i].f,eqs[i].y0);
+  }
+
+  /* 初始化默认 2 个方程 */
+  addEqRow(1,'y2','2');
+  addEqRow(2,'-4*y1 - 0.5*y2','0');
+
+  /* 添加方程按钮 */
+  q('#odeSysAdd').onclick=function(){
+    if(getEqCount()>=MAX_EQ)return;
+    addEqRow(getEqCount()+1,'','0');
+  };
+
+  /* 删除方程按钮（事件代理） */
+  sysEqContainer.addEventListener('click',function(e){
+    var btn=e.target.closest('.ode-sys-del');
+    if(!btn)return;
+    if(getEqCount()<=MIN_EQ)return;
+    removeEqRow(+btn.dataset.idx);
+  });
+
+  /* ========== tab 切换 ========== */
+  var tabS=q('#odeTabSingle'),tabY=q('#odeTabSystem'),tabN=q('#odeTabNumerov');
+  function setTab(which){
+    tabS.className=which==='single'?'t-btn':'t-btn t-btn-o';
+    tabS.style.fontWeight=which==='single'?'700':'';
+    tabY.className=which==='system'?'t-btn':'t-btn t-btn-o';
+    tabY.style.fontWeight=which==='system'?'700':'';
+    tabN.className=which==='numerov'?'t-btn':'t-btn t-btn-o';
+    tabN.style.fontWeight=which==='numerov'?'700':'';
+    panelS.style.display=which==='single'?'':'none';
+    panelY.style.display=which==='system'?'':'none';
+    panelN.style.display=which==='numerov'?'':'none';
+    resEl.innerHTML='';cvs.style.display='none';toggleBtn.style.display='none';
+    tableWrap.style.display='none';
+  }
+  tabS.onclick=function(){setTab('single')};
+  tabY.onclick=function(){setTab('system')};
+  tabN.onclick=function(){setTab('numerov')};
+
+  /* ========== 相空间轴选择显示/隐藏 ========== */
+  var phaseAxesDiv=q('#odePhaseAxes');
+  qa('input[name="odePlotMode"]').forEach(function(r){
+    r.onchange=function(){phaseAxesDiv.style.display=this.value==='phase'?'':'none'};
+  });
+
+  /* ========== RK45 容差行 ========== */
+  q('#odeMRK45').onchange=function(){q('#odeTolRow').style.display=this.checked?'':'none'};
+
+  /* ========== 单方程预设 ========== */
+  var presets={
+    decay:{e:'-0.5*y + sin(2*x)',x0:'0',y0:'0',xe:'15',h:'0.05'},
+    exp:{e:'0.5*y',x0:'0',y0:'1',xe:'5',h:'0.05'},
+    logistic:{e:'y*(1-y)',x0:'0',y0:'0.1',xe:'10',h:'0.05'},
+    stiff:{e:'-1000*(y - sin(x)) + cos(x)',x0:'0',y0:'0',xe:'5',h:'0.001'}
+  };
+  qa('[data-preset]').forEach(function(b){b.onclick=function(){
+    var p=presets[this.dataset.preset];
+    q('#odeExpr').value=p.e;q('#odeX0').value=p.x0;q('#odeY0').value=p.y0;
+    q('#odeXend').value=p.xe;q('#odeH').value=p.h;
+    if(this.dataset.preset==='stiff')
+      resEl.innerHTML='<span style="color:#e6a23c">\u63d0\u793a\uff1a\u521a\u6027\u65b9\u7a0b\u9002\u5408\u4f7f\u7528\u9690\u5f0fEuler\u6cd5</span>';
+  }});
+
+  /* ========== 方程组预设 ========== */
+  var sysP={
+    osc:{eqs:[{f:'y2',y0:'2'},{f:'-4*y1 - 0.5*y2',y0:'0'}],t0:'0',te:'15',h:'0.05'},
+    lv:{eqs:[{f:'1.5*y1 - y1*y2',y0:'1'},{f:'-3*y2 + y1*y2',y0:'1'}],t0:'0',te:'20',h:'0.01'},
+    chaos:{eqs:[{f:'y2',y0:'0.5'},{f:'-0.5*y2 - sin(y1) + 1.15*cos(0.667*t)',y0:'0'}],t0:'0',te:'100',h:'0.02'}
+  };
+  qa('[data-syspreset]').forEach(function(b){b.onclick=function(){
+    var p=sysP[this.dataset.syspreset];
+    setSystemEqs(p.eqs);
+    q('#odeSysT0').value=p.t0;q('#odeSysTend').value=p.te;q('#odeSysH').value=p.h;
+    if(this.dataset.syspreset==='chaos')
+      resEl.innerHTML='<span style="color:#e6a23c">\u63d0\u793a\uff1a\u6df7\u6c8c\u6446\u7cfb\u7edf\uff0c\u5c1d\u8bd5\u76f8\u7a7a\u95f4\u7ed8\u56fe\u67e5\u770b\u5438\u5f15\u5b50</span>';
+    solveSystem();
+  }});
+
+  /* ========== niceStep ========== */
+  function niceStep(range,tgt){
+    if(range<=0) return 1;
+    var r=range/tgt,m=Math.pow(10,Math.floor(Math.log10(r))),n=r/m;
+    return (n<1.5?1:n<3?2:n<7?5:10)*m;
+  }
+
+  /* ========== Canvas 绘图 ========== */
+  function drawCanvas(series,labels,xLbl,yLbl){
+    cvs.style.display='';
+    var dpr=window.devicePixelRatio||1;
+    var w=cvs.clientWidth,h=Math.min(w*0.55,400);
+    cvs.width=w*dpr;cvs.height=h*dpr;cvs.style.height=h+'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    var pad={l:50,r:20,t:10,b:30},pw=w-pad.l-pad.r,ph=h-pad.t-pad.b;
+    /* 边界 */
+    var xMin=Infinity,xMax=-Infinity,yMin=Infinity,yMax=-Infinity;
+    series.forEach(function(s){s.forEach(function(p){
+      if(isFinite(p[0])&&isFinite(p[1])){
+        if(p[0]<xMin)xMin=p[0];if(p[0]>xMax)xMax=p[0];
+        if(p[1]<yMin)yMin=p[1];if(p[1]>yMax)yMax=p[1];
+      }
+    })});
+    if(xMin===xMax){xMin-=1;xMax+=1}
+    if(yMin===yMax){yMin-=1;yMax+=1}
+    var xP=(xMax-xMin)*0.05||1,yP=(yMax-yMin)*0.05||1;
+    xMin-=xP;xMax+=xP;yMin-=yP;yMax+=yP;
+    function tx(v){return pad.l+(v-xMin)/(xMax-xMin)*pw}
+    function ty(v){return pad.t+(1-(v-yMin)/(yMax-yMin))*ph}
+    /* 清空 */
+    ctx.clearRect(0,0,w,h);
+    /* 网格 */
+    var xS=niceStep(xMax-xMin,8),yS=niceStep(yMax-yMin,6);
+    ctx.strokeStyle='#eee';ctx.lineWidth=1;ctx.beginPath();
+    for(var gx=Math.ceil(xMin/xS)*xS;gx<=xMax;gx+=xS){var px=tx(gx);ctx.moveTo(px,pad.t);ctx.lineTo(px,pad.t+ph)}
+    for(var gy=Math.ceil(yMin/yS)*yS;gy<=yMax;gy+=yS){var py=ty(gy);ctx.moveTo(pad.l,py);ctx.lineTo(pad.l+pw,py)}
+    ctx.stroke();
+    /* 坐标轴 */
+    ctx.strokeStyle='#333';ctx.lineWidth=1.5;ctx.beginPath();
+    ctx.moveTo(pad.l,pad.t+ph);ctx.lineTo(pad.l+pw,pad.t+ph);
+    ctx.moveTo(pad.l,pad.t);ctx.lineTo(pad.l,pad.t+ph);ctx.stroke();
+    /* y=0 基线 */
+    if(yMin<0&&yMax>0){
+      ctx.save();ctx.strokeStyle='#ccc';ctx.lineWidth=1;ctx.setLineDash([4,3]);ctx.beginPath();
+      var zy=ty(0);ctx.moveTo(pad.l,zy);ctx.lineTo(pad.l+pw,zy);ctx.stroke();ctx.restore();
+    }
+    /* 刻度 */
+    ctx.fillStyle='#888';ctx.font='10px sans-serif';ctx.textAlign='center';ctx.textBaseline='top';
+    for(var gx=Math.ceil(xMin/xS)*xS;gx<=xMax;gx+=xS) ctx.fillText(+gx.toPrecision(4),tx(gx),pad.t+ph+4);
+    ctx.textAlign='right';ctx.textBaseline='middle';
+    for(var gy=Math.ceil(yMin/yS)*yS;gy<=yMax;gy+=yS) ctx.fillText(+gy.toPrecision(4),pad.l-6,ty(gy));
+    /* 曲线 */
+    series.forEach(function(s,i){
+      ctx.strokeStyle=colors[i%colors.length];ctx.lineWidth=1.8;ctx.beginPath();
+      var started=false;
+      s.forEach(function(p){
+        if(!isFinite(p[0])||!isFinite(p[1]))return;
+        var px=tx(p[0]),py=ty(p[1]);
+        if(!started){ctx.moveTo(px,py);started=true}else ctx.lineTo(px,py);
+      });
+      ctx.stroke();
+    });
+    /* 图例 右上角 */
+    if(labels&&labels.length){
+      ctx.font='11px sans-serif';
+      var maxW=0;labels.forEach(function(l){var tw=ctx.measureText(l).width;if(tw>maxW)maxW=tw});
+      var lx=pad.l+pw-maxW-24;
+      labels.forEach(function(l,i){
+        var ly=pad.t+14+i*16;
+        ctx.fillStyle=colors[i%colors.length];ctx.fillRect(lx,ly-4,14,3);
+        ctx.fillStyle='#555';ctx.textAlign='left';ctx.fillText(l,lx+18,ly);
+      });
+    }
+    /* 轴标签 */
+    ctx.fillStyle='#888';ctx.font='11px sans-serif';ctx.textAlign='center';ctx.textBaseline='top';
+    ctx.fillText(xLbl||'x',pad.l+pw/2,h-2);
+    ctx.save();ctx.translate(12,pad.t+ph/2);ctx.rotate(-Math.PI/2);
+    ctx.textBaseline='middle';ctx.fillText(yLbl||'y',0,0);ctx.restore();
+  }
+  /* resize 重绘 */
+  var rTimer;
+  window.addEventListener('resize',function(){clearTimeout(rTimer);rTimer=setTimeout(function(){if(lastRedraw)lastRedraw()},200)});
+
+  /* ========== 表达式编译 ========== */
+  function compileE(str){
+    try{var nd=math.compile(str);return{fn:function(sc){return nd.evaluate(sc)},err:null}}
+    catch(e){return{fn:null,err:e.message}}
+  }
+
+  /* ========== 单方程求解 ========== */
+  function solveSingle(){
+    var expr=q('#odeExpr').value.trim();
+    if(!expr){resEl.innerHTML='<span style="color:#f56c6c">\u8bf7\u8f93\u5165\u8868\u8fbe\u5f0f</span>';return}
+    var comp=compileE(expr);
+    if(comp.err){resEl.innerHTML='<span style="color:#f56c6c">\u8868\u8fbe\u5f0f\u9519\u8bef: '+comp.err+'</span>';return}
+    var f=comp.fn;
+    var x0=parseFloat(q('#odeX0').value),y0=parseFloat(q('#odeY0').value);
+    var xend=parseFloat(q('#odeXend').value),h=parseFloat(q('#odeH').value);
+    var tol=parseFloat(q('#odeTol').value)||1e-6;
+    if([x0,y0,xend,h].some(isNaN)){resEl.innerHTML='<span style="color:#f56c6c">\u53c2\u6570\u65e0\u6548</span>';return}
+    if(h<=0){resEl.innerHTML='<span style="color:#f56c6c">\u6b65\u957f\u5fc5\u987b\u4e3a\u6b63</span>';return}
+    var methods=[];
+    if(q('#odeMEuler').checked)methods.push('euler');
+    if(q('#odeMHeun').checked)methods.push('heun');
+    if(q('#odeMRK4').checked)methods.push('rk4');
+    if(q('#odeMImpl').checked)methods.push('implicit');
+    if(q('#odeMRK45').checked)methods.push('rk45');
+    if(!methods.length){resEl.innerHTML='<span style="color:#f56c6c">\u8bf7\u81f3\u5c11\u9009\u62e9\u4e00\u79cd\u65b9\u6cd5</span>';return}
+    var MAX=100000,allS=[],allL=[],allT=[],warns=[];
+    function ef(x,y){try{return f({x:x,y:y})}catch(e){return NaN}}
+    methods.forEach(function(m){
+      var pts=[[x0,y0]],x=x0,y=y0;
+      if(m==='rk45'){
+        var hc=h,steps=0,hmin=1e-10;
+        while(x<xend-hmin&&steps<MAX){
+          if(x+hc>xend)hc=xend-x;
+          var k1=ef(x,y);
+          var k2=ef(x+hc/5,y+hc*k1/5);
+          var k3=ef(x+3*hc/10,y+hc*(3*k1/40+9*k2/40));
+          var k4=ef(x+4*hc/5,y+hc*(44*k1/45-56*k2/15+32*k3/9));
+          var k5=ef(x+8*hc/9,y+hc*(19372*k1/6561-25360*k2/2187+64448*k3/6561-212*k4/729));
+          var k6=ef(x+hc,y+hc*(9017*k1/3168-355*k2/33+46732*k3/5247+49*k4/176-5103*k5/18656));
+          var y5=y+hc*(35*k1/384+500*k3/1113+125*k4/192-2187*k5/6784+11*k6/84);
+          var k7=ef(x+hc,y5);
+          var y4=y+hc*(5179*k1/57600+7571*k3/16695+393*k4/640-92097*k5/339200+187*k6/2100+k7/40);
+          var err=Math.abs(y5-y4);
+          if(!isFinite(y5)){warns.push('RK45: \u6570\u503c\u6ea2\u51fa\u4e8e x='+x.toFixed(6));break}
+          if(err<=tol||hc<=hmin){x+=hc;y=y5;pts.push([x,y])}
+          var hn=err>0?hc*0.84*Math.pow(tol/err,0.25):hc*4;
+          hc=Math.max(hmin,Math.min(4*hc,Math.max(0.1*hc,hn)));
+          steps++;
+        }
+        if(steps>=MAX)warns.push('RK45: \u8fbe\u5230\u6700\u5927\u6b65\u6570');
+      }else{
+        var n=Math.ceil(Math.abs(xend-x0)/h);if(n>MAX)n=MAX;
+        for(var i=0;i<n;i++){
+          var xn=x,yn=y,yNew;
+          if(m==='euler'){
+            yNew=yn+h*ef(xn,yn);
+          }else if(m==='heun'){
+            var k1=ef(xn,yn),k2=ef(xn+h,yn+h*k1);
+            yNew=yn+h*(k1+k2)/2;
+          }else if(m==='rk4'){
+            var k1=ef(xn,yn),k2=ef(xn+h/2,yn+h*k1/2);
+            var k3=ef(xn+h/2,yn+h*k2/2),k4=ef(xn+h,yn+h*k3);
+            yNew=yn+h*(k1+2*k2+2*k3+k4)/6;
+          }else if(m==='implicit'){
+            var xn1=xn+h,yg=yn+h*ef(xn,yn),conv=false;
+            for(var it=0;it<50;it++){
+              var yNxt=yn+h*ef(xn1,yg);
+              if(Math.abs(yNxt-yg)<1e-12){conv=true;yg=yNxt;break}
+              yg=yNxt;
+            }
+            if(!conv)warns.push('\u9690\u5f0fEuler: \u8fed\u4ee3\u672a\u6536\u655b\u4e8e x='+(xn+h).toFixed(6));
+            yNew=yg;
+          }
+          if(!isFinite(yNew)){warns.push(m+': \u6570\u503c\u6ea2\u51fa\u4e8e x='+(xn+h).toFixed(6));break}
+          x=xn+h;y=yNew;pts.push([x,y]);
+        }
+      }
+      var mname={euler:'Euler',heun:'Heun',rk4:'RK4',implicit:'\u9690\u5f0fEuler',rk45:'RK45'}[m];
+      allS.push(pts);allL.push(mname);allT.push({name:mname,pts:pts});
+    });
+    lastRedraw=function(){drawCanvas(allS,allL,'x','y')};lastRedraw();
+    var info=allT.map(function(t){
+      var last=t.pts[t.pts.length-1];
+      return t.name+': '+t.pts.length+' \u70b9, y('+last[0].toPrecision(5)+') = '+last[1].toPrecision(8);
+    }).join('<br>');
+    if(warns.length)info+='<br><span style="color:#e6a23c">\u26a0 '+warns.join('<br>\u26a0 ')+'</span>';
+    resEl.innerHTML=info;
+    buildTable(allT,false,0);toggleBtn.style.display='';
+  }
+
+  /* ========== N 维方程组求解器 ========== */
+  function buildScope(t,Y){
+    var scope={t:t};
+    for(var i=0;i<Y.length;i++) scope['y'+(i+1)]=Y[i];
+    return scope;
+  }
+
+  function sysEuler(fs,t,Y,h){
+    var N=Y.length;
+    var scope=buildScope(t,Y);
+    var Ynew=[];
+    for(var i=0;i<N;i++) Ynew.push(Y[i]+h*fs[i](scope));
+    return Ynew;
+  }
+
+  function sysHeun(fs,t,Y,h){
+    var N=Y.length;
+    var scope1=buildScope(t,Y);
+    var k1=[];
+    for(var i=0;i<N;i++) k1.push(fs[i](scope1));
+    var Ytmp=[];
+    for(var i=0;i<N;i++) Ytmp.push(Y[i]+h*k1[i]);
+    var scope2=buildScope(t+h,Ytmp);
+    var k2=[];
+    for(var i=0;i<N;i++) k2.push(fs[i](scope2));
+    var Ynew=[];
+    for(var i=0;i<N;i++) Ynew.push(Y[i]+h*(k1[i]+k2[i])/2);
+    return Ynew;
+  }
+
+  function sysRK4(fs,t,Y,h){
+    var N=Y.length;
+    var k1=[],k2=[],k3=[],k4=[];
+    var scope1=buildScope(t,Y);
+    for(var i=0;i<N;i++) k1.push(fs[i](scope1));
+    var Y2=[];
+    for(var i=0;i<N;i++) Y2.push(Y[i]+h*k1[i]/2);
+    var scope2=buildScope(t+h/2,Y2);
+    for(var i=0;i<N;i++) k2.push(fs[i](scope2));
+    var Y3=[];
+    for(var i=0;i<N;i++) Y3.push(Y[i]+h*k2[i]/2);
+    var scope3=buildScope(t+h/2,Y3);
+    for(var i=0;i<N;i++) k3.push(fs[i](scope3));
+    var Y4=[];
+    for(var i=0;i<N;i++) Y4.push(Y[i]+h*k3[i]);
+    var scope4=buildScope(t+h,Y4);
+    for(var i=0;i<N;i++) k4.push(fs[i](scope4));
+    var Ynew=[];
+    for(var i=0;i<N;i++) Ynew.push(Y[i]+h*(k1[i]+2*k2[i]+2*k3[i]+k4[i])/6);
+    return Ynew;
+  }
+
+  /* ========== 方程组求解 ========== */
+  function solveSystem(){
+    var rows=sysEqContainer.querySelectorAll('.ode-eq-row');
+    var N=rows.length;
+    if(N<2){resEl.innerHTML='<span style="color:#f56c6c">\u81f3\u5c11\u9700\u8981 2 \u4e2a\u65b9\u7a0b</span>';return}
+    var fs=[],Y0=[],compileOk=true;
+    for(var i=0;i<N;i++){
+      var fInput=rows[i].querySelector('.ode-sys-f');
+      var y0Input=rows[i].querySelector('.ode-sys-y0');
+      var fStr=fInput.value.trim();
+      var y0Str=y0Input.value.trim();
+      if(!fStr){resEl.innerHTML='<span style="color:#f56c6c">\u65b9\u7a0b '+(i+1)+' \u8868\u8fbe\u5f0f\u4e3a\u7a7a</span>';compileOk=false;break}
+      var comp=compileE(fStr);
+      if(comp.err){resEl.innerHTML='<span style="color:#f56c6c">f'+toSub(i+1)+' \u9519\u8bef: '+comp.err+'</span>';compileOk=false;break}
+      var y0v=parseFloat(y0Str);
+      if(isNaN(y0v)){resEl.innerHTML='<span style="color:#f56c6c">y'+toSub(i+1)+'(0) \u65e0\u6548</span>';compileOk=false;break}
+      fs.push(function(fn){return function(scope){try{return fn(scope)}catch(e){return NaN}}}(comp.fn));
+      Y0.push(y0v);
+    }
+    if(!compileOk)return;
+    var t0=parseFloat(q('#odeSysT0').value),tend=parseFloat(q('#odeSysTend').value);
+    var h=parseFloat(q('#odeSysH').value);
+    if([t0,tend,h].some(isNaN)){resEl.innerHTML='<span style="color:#f56c6c">\u53c2\u6570\u65e0\u6548</span>';return}
+    if(h<=0){resEl.innerHTML='<span style="color:#f56c6c">\u6b65\u957f\u5fc5\u987b\u4e3a\u6b63</span>';return}
+    var methods=[];
+    if(q('#odeSysMEuler').checked)methods.push('euler');
+    if(q('#odeSysMHeun').checked)methods.push('heun');
+    if(q('#odeSysMRK4').checked)methods.push('rk4');
+    if(!methods.length){resEl.innerHTML='<span style="color:#f56c6c">\u8bf7\u81f3\u5c11\u9009\u62e9\u4e00\u79cd\u65b9\u6cd5</span>';return}
+    var plotMode=q('input[name="odePlotMode"]:checked').value;
+    var phaseXKey=q('#odePhaseX').value;
+    var phaseYKey=q('#odePhaseY').value;
+    var phaseXIdx=parseInt(phaseXKey.replace('y',''))-1;
+    var phaseYIdx=parseInt(phaseYKey.replace('y',''))-1;
+    var MAX=200000,allS=[],allL=[],allT=[];
+    var stepFns={euler:sysEuler,heun:sysHeun,rk4:sysRK4};
+    methods.forEach(function(m){
+      var stepper=stepFns[m];
+      var pts=[],t=t0,Y=Y0.slice();
+      var rec={t:t};for(var j=0;j<N;j++) rec['y'+(j+1)]=Y[j];
+      pts.push(rec);
+      var nSteps=Math.ceil(Math.abs(tend-t0)/h);if(nSteps>MAX)nSteps=MAX;
+      var ok=true;
+      for(var i=0;i<nSteps&&ok;i++){
+        var Ynew=stepper(fs,t,Y,h);
+        for(var j=0;j<N;j++){
+          if(!isFinite(Ynew[j])){ok=false;break}
+        }
+        if(!ok)break;
+        t+=h;Y=Ynew;
+        var r={t:t};for(var j=0;j<N;j++) r['y'+(j+1)]=Y[j];
+        pts.push(r);
+      }
+      var mname={euler:'Euler',heun:'Heun',rk4:'RK4'}[m];
+      if(plotMode==='time'){
+        for(var j=0;j<N;j++){
+          allS.push(pts.map(function(p){return[p.t,p['y'+(j+1)]]}));
+          allL.push(mname+' y'+toSub(j+1));
+        }
+      }else{
+        allS.push(pts.map(function(p){return[p['y'+(phaseXIdx+1)],p['y'+(phaseYIdx+1)]]}));
+        allL.push(mname);
+      }
+      allT.push({name:mname,pts:pts,N:N});
+    });
+    var xL,yL;
+    if(plotMode==='time'){xL='t';yL='y'}
+    else{xL='y'+toSub(phaseXIdx+1);yL='y'+toSub(phaseYIdx+1)}
+    lastRedraw=function(){drawCanvas(allS,allL,xL,yL)};lastRedraw();
+    var info=allT.map(function(tb){
+      var last=tb.pts[tb.pts.length-1];
+      var vals=[];
+      for(var j=0;j<tb.N;j++) vals.push('y'+toSub(j+1)+'='+last['y'+(j+1)].toPrecision(6));
+      return tb.name+': '+tb.pts.length+' \u70b9, '+vals.join(', ');
+    }).join('<br>');
+    resEl.innerHTML=info;
+    buildTable(allT,true,N);toggleBtn.style.display='';
+  }
+
+  /* ========== 数据表 ========== */
+  function buildTable(tables,isSys,N){
+    var html='';
+    tables.forEach(function(tb){
+      var pts=tb.pts,n=pts.length,show;
+      if(n>50){show=pts.slice(0,20).concat([null]).concat(pts.slice(n-20))}else{show=pts.slice()}
+      html+='<div style="font-weight:700;margin:8px 0 4px">'+tb.name+' ('+n+' \u70b9)</div>';
+      html+='<table style="width:100%;border-collapse:collapse;font-size:12px">';
+      html+='<thead><tr style="position:sticky;top:0;background:var(--bg-zebra,#f9f9f9)">';
+      if(isSys){
+        html+='<th style="padding:4px 8px;border-bottom:2px solid #ddd;text-align:left">t</th>';
+        for(var j=1;j<=N;j++) html+='<th style="padding:4px 8px;border-bottom:2px solid #ddd;text-align:left">y'+toSub(j)+'</th>';
+      }else{
+        html+='<th style="padding:4px 8px;border-bottom:2px solid #ddd;text-align:left">x</th><th style="padding:4px 8px;border-bottom:2px solid #ddd;text-align:left">y</th>';
+      }
+      html+='</tr></thead><tbody>';
+      var colSpan=isSys?(N+1):2;
+      show.forEach(function(p,i){
+        if(!p){html+='<tr><td colspan="'+colSpan+'" style="text-align:center;padding:6px;color:#999">\u2026 \u7701\u7565 '+(n-40)+' \u884c \u2026</td></tr>';return}
+        var bg=i%2?'background:var(--bg-zebra,#f9f9f9)':'';
+        if(isSys){
+          html+='<tr style="'+bg+'"><td style="padding:3px 8px">'+p.t.toPrecision(6)+'</td>';
+          for(var j=1;j<=N;j++) html+='<td style="padding:3px 8px">'+p['y'+j].toPrecision(8)+'</td>';
+          html+='</tr>';
+        }else{
+          html+='<tr style="'+bg+'"><td style="padding:3px 8px">'+p[0].toPrecision(6)+'</td>';
+          html+='<td style="padding:3px 8px">'+p[1].toPrecision(8)+'</td></tr>';
+        }
+      });
+      html+='</tbody></table>';
+    });
+    tableWrap.innerHTML=html;
+  }
+
+  /* ========== 切换数据表 ========== */
+  toggleBtn.onclick=function(){
+    var vis=tableWrap.style.display==='none';
+    tableWrap.style.display=vis?'':'none';
+    this.textContent=vis?'\u9690\u85cf\u6570\u636e\u8868':'\u663e\u793a\u6570\u636e\u8868';
+  };
+
+  /* ========== Numerov 算法 ========== */
+  function mynumerov(k2Fn,sFn,x0,xEnd,N,y0,dy0){
+    var h=(xEnd-x0)/N;
+    var x=new Array(N+1);
+    var y=new Array(N+1);
+    for(var i=0;i<=N;i++) x[i]=x0+i*h;
+    y[0]=y0;
+    y[1]=y0+h*dy0+h*h/2*(sFn(x[0])-k2Fn(x[0])*y0);
+    for(var i=2;i<=N;i++){
+      var k2m1=k2Fn(x[i-1]),k2m2=k2Fn(x[i-2]),k2i=k2Fn(x[i]);
+      var sm1=sFn(x[i-1]),sm2=sFn(x[i-2]),si=sFn(x[i]);
+      y[i]=(2*(1-5*h*h/12*k2m1)*y[i-1]
+           -(1+h*h/12*k2m2)*y[i-2]
+           +h*h/12*(si+10*sm1+sm2))
+           /(1+h*h/12*k2i);
+    }
+    return{x:x,y:y};
+  }
+
+  /* ========== Numerov 预设 ========== */
+  var numPresets={
+    harmonic:{k2:'4*pi^2',s:'0',x0:'0',xe:'1',y0:'1',dy0:'0'},
+    airy:{k2:'x',s:'0',x0:'0',xe:'10',y0:'0.355028',dy0:'-0.258819'},
+    bessel:{k2:'1-1/(4*x^2)',s:'0',x0:'0.5',xe:'20',y0:'0.9385',dy0:'-0.2423'}
+  };
+  qa('[data-numpreset]').forEach(function(b){b.onclick=function(){
+    var p=numPresets[this.dataset.numpreset];
+    q('#odeNK2').value=p.k2;q('#odeNS').value=p.s;
+    q('#odeNX0').value=p.x0;q('#odeNXend').value=p.xe;
+    q('#odeNY0').value=p.y0;q('#odeNDY0').value=p.dy0;
+    solveNumerov();
+  }});
+
+  /* ========== Numerov 滑块 ========== */
+  q('#odeNN').oninput=function(){q('#odeNNVal').textContent=this.value};
+
+  /* ========== Numerov 求解 ========== */
+  function solveNumerov(){
+    var k2str=q('#odeNK2').value.trim();
+    var sstr=q('#odeNS').value.trim()||'0';
+    var x0=parseFloat(q('#odeNX0').value);
+    var xEnd=parseFloat(q('#odeNXend').value);
+    var y0=parseFloat(q('#odeNY0').value);
+    var dy0=parseFloat(q('#odeNDY0').value);
+    var N=parseInt(q('#odeNN').value);
+    if([x0,xEnd,y0,dy0].some(isNaN)){resEl.innerHTML='<span style="color:#f56c6c">参数无效</span>';return}
+    var compK2=compileE(k2str);
+    var compS=compileE(sstr);
+    if(compK2.err){resEl.innerHTML='<span style="color:#f56c6c">k²表达式错误: '+compK2.err+'</span>';return}
+    if(compS.err){resEl.innerHTML='<span style="color:#f56c6c">s(x)表达式错误: '+compS.err+'</span>';return}
+    var k2Fn=function(xv){return compK2.fn({x:xv})};
+    var sFn=function(xv){return compS.fn({x:xv})};
+    var result=mynumerov(k2Fn,sFn,x0,xEnd,N,y0,dy0);
+    var pts=[];
+    for(var i=0;i<=N;i++) pts.push([result.x[i],result.y[i]]);
+    drawCanvas([pts],['Numerov'],'x','y(x)');
+    lastRedraw=function(){drawCanvas([pts],['Numerov'],'x','y(x)')};
+    resEl.innerHTML='Numerov 求解完成 | N='+N+' | h='+((xEnd-x0)/N).toExponential(3)+
+      ' | y('+xEnd.toFixed(2)+')='+result.y[N].toFixed(8);
+    /* 数据表 */
+    var tb={name:'Numerov',pts:pts};
+    buildTable([tb],false,0);toggleBtn.style.display='';
+  }
+
+  /* ========== 事件绑定 ========== */
+  q('#odeSolve').onclick=solveSingle;
+  q('#odeSysSolve').onclick=solveSystem;
+  q('#odeNSolve').onclick=solveNumerov;
+  el.addEventListener('keydown',function(e){
+    if(e.key==='Enter'){
+      e.preventDefault();
+      if(panelS.style.display!=='none')solveSingle();
+      else if(panelY.style.display!=='none')solveSystem();
+      else solveNumerov();
+    }
+  });
+}}
