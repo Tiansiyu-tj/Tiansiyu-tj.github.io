@@ -58,9 +58,9 @@ post:
 comments:
   giscus:
     repo: Tiansiyu-tj/Tiansiyu-tj.github.io
-    repo_id: ""          # 从 giscus.app 获取
+    repo_id: "R_kgDOTATlxg"
     category: Announcements
-    category_id: ""      # 从 giscus.app 获取
+    category_id: "DIC_kwDOTATlxs4C_i96"
     mapping: pathname
     reactions_enabled: true
     theme: light
