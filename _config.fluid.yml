@@ -1,0 +1,74 @@
+# Fluid 主题独立配置
+# 文档: https://hexo.fluid-dev.com/docs/
+
+# -------------------------------
+# 博客基本信息
+# -------------------------------
+blog_title: "Tiansiyu 的博客"
+board: 努力学习，认真生活。
+
+# -------------------------------
+# 导航栏
+# -------------------------------
+navbar:
+  menu:
+    - icon: fas fa-home
+      name: 首页
+      url: /
+    - icon: fas fa-archive
+      name: 归档
+      url: /archives/
+    - icon: fas fa-tags
+      name: 标签
+      url: /tags/
+    - icon: fas fa-folder-open
+      name: 分类
+      url: /categories/
+    - icon: fas fa-info-circle
+      name: 关于
+      url: /about/
+
+# -------------------------------
+# 首页
+# -------------------------------
+index:
+  banner_img: /img/default.png
+  slogan:
+    text: "Welcome to my blog"
+
+# -------------------------------
+# 暗黑模式
+# -------------------------------
+dark_mode:
+  enable: true
+  default: auto
+
+# -------------------------------
+# 文章页
+# -------------------------------
+post:
+  comments:
+    enable: true
+    type: giscus
+
+# -------------------------------
+# Giscus 评论
+# 待用户在 GitHub 开 Discussions + 安装 giscus app 后填入
+# -------------------------------
+comments:
+  giscus:
+    repo: Tiansiyu-tj/Tiansiyu-tj.github.io
+    repo_id: ""          # 从 giscus.app 获取
+    category: Announcements
+    category_id: ""      # 从 giscus.app 获取
+    mapping: pathname
+    reactions_enabled: true
+    theme: light
+    dark_theme: dark
+    lang: zh-CN
+
+# -------------------------------
+# 搜索
+# -------------------------------
+search:
+  enable: true
