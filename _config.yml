@@ -3,17 +3,17 @@
 ## Source: https://github.com/hexojs/hexo/
 
 # Site
-title: Tiansiyu 的博客
+title: Tshowy 的博客
 subtitle: ''
 description: ''
 keywords:
-author: Tiansiyu
+author: Tshowy
 language: zh-CN
 timezone: Asia/Shanghai
 
 # URL
 ## Set your site url here. For example, if you use GitHub Page, set url as 'https://username.github.io/project'
-url: https://Tiansiyu-tj.github.io
+url: https://Tshowy-tj.github.io
 permalink: :title/
 permalink_defaults:
 pretty_urls:

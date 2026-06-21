@@ -198,7 +198,7 @@ comment:
   # Giscus（基于 GitHub Discussions，无需自建后端）
   # 配置生成: https://giscus.app
   giscus:
-    dataRepo: "Tiansiyu-tj/Tiansiyu-tj.github.io"               # 格式: username/repo-name
+    dataRepo: "Tshowy-tj/Tshowy-tj.github.io"               # 格式: username/repo-name
     dataRepoId: "R_kgDOTATlxg"               # 从 https://giscus.app 生成
     dataCategory: Announcements
     dataCategoryId: "DIC_kwDOTATlxs4C_i96"           # 从 https://giscus.app 生成
