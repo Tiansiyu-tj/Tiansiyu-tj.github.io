@@ -127,8 +127,8 @@ color:
 # — 背景图 —
 # 叠在最底层，纸面在其上方
 imageShow:
-  enable: true
-  background: /img/main-page.jpg # 相对于 source/ 的图片路径
+  enable: false
+  background: /img/favicon.webp # 相对于 source/ 的图片路径
 
 # — 字体 —
 # MiSans (HyperOS 系统字体) 通过 jsDelivr CDN 加载，子集化按需加载。
