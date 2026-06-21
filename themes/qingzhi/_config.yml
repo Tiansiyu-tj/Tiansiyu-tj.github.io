@@ -231,7 +231,7 @@ aplayer:
   enable: true                  # 播放器总开关（false 则首页完全不加载 APlayer）
   server: netease               # 音乐平台: netease | tencent | kugou | xiami | baidu
   type: playlist                # 资源类型: playlist | album | song | search | artist
-  id: '472143089'               # 歌单/专辑/歌曲 ID（URL 中的数字）
+  id: '595057259'               # 歌单/专辑/歌曲 ID（URL 中的数字）
   theme: '#5B8BA4'              # 播放器主题色（霁蓝，与 accent 一致）
 
   # 自定义 Meting API（留空使用默认 API）
